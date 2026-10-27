@@ -19,7 +19,7 @@ export function db(): Sql {
       connect_timeout: 15,
       ssl: process.env.DATABASE_SSL === 'off' ? false : 'require',
       // Supabase pooler (transaction mode) bir ulanishda ketma-ket yuborilgan so'rovlarda qotib qoladi: har ulanishda bittadan
-      ...({ max_pipeline: 1 } as object),
+      ...({ max_pipeline: 0 } as object),
       onnotice: () => {},
       types: {
         // sanalar "2026-10-27" ko'rinishida (JS Date emas), son turlari oddiy raqam
