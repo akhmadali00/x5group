@@ -108,6 +108,7 @@ create table if not exists public.contents (
   material_url   text,
   posted_on      text[] not null default '{}',
   link_instagram text,
+  link_telegram  text,
   link_youtube   text,
   note_instagram text,
   note_telegram  text,
@@ -125,8 +126,9 @@ create table if not exists public.tasks (
   assignee_id   uuid not null references public.members(id) on delete cascade,
   title         text not null check (length(btrim(title)) > 0),
   note          text,
-  assigned_on   date not null default current_date,    -- topshirilgan sana
+  assigned_on   date not null default current_date,    -- vazifa berilgan sana
   duration_days int not null default 3 check (duration_days >= 0),
+  due_on        date not null default current_date,    -- topshirish sanasi
   status        text not null default 'Boshlanmagan' check (status in ('Boshlanmagan', 'Jarayonda', 'Tayyor', 'Tugatildi')),
   done_at       timestamptz,                            -- samaradorlik statistikasi uchun
   created_by    uuid references public.members(id) on delete set null,

@@ -86,6 +86,7 @@ export async function loadDatasets(me: Me): Promise<Loaded> {
       row.telegram = orEmpty(m.telegram_username);
     }
     if (admin || self) {
+      row.id = m.id;
       row.email = orEmpty(m.email);
       row.ruxsat = (m.permissions || []).join(', ');
     }
@@ -98,7 +99,6 @@ export async function loadDatasets(me: Me): Promise<Loaded> {
     }
     if (admin) {
       row.tg_holat = m.telegram_status;
-      row.id = m.id;
     }
     return row;
   });
@@ -172,6 +172,7 @@ export async function loadDatasets(me: Me): Promise<Loaded> {
       material: orEmpty(c.material_url),
       joylandi: list(c.posted_on),
       havola_instagram: orEmpty(c.link_instagram),
+      havola_telegram: orEmpty(c.link_telegram),
       havola_youtube: orEmpty(c.link_youtube),
       izoh_instagram: orEmpty(c.note_instagram),
       izoh_telegram: orEmpty(c.note_telegram),
@@ -188,7 +189,7 @@ export async function loadDatasets(me: Me): Promise<Loaded> {
       vazifa: t.title,
       izoh: orEmpty(t.note),
       muddat: t.duration_days,
-      sana: t.assigned_on,
+      sana: t.due_on,
       holat: t.status
     };
   });
