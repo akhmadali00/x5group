@@ -1,4 +1,4 @@
-import { db } from './db';
+import { db, type Sql } from './db';
 import { can, isAdmin, TARGET_ROLES, type Me } from './perm';
 import { REVERTABLE_SQL } from './services/history';
 
@@ -46,11 +46,21 @@ export type Datasets = {
 
 export type Loaded = { datasets: Datasets; archived: Record<string, string>; syncAt: string };
 
+/** Hamma so'rovlar bitta ulanishda ketma-ket yuboriladi (pipeline): uzoq masofadagi bazada ham bitta aylanish vaqti ketadi. */
 export async function loadDatasets(me: Me): Promise<Loaded> {
-  const sql = db();
-  const admin = isAdmin(me);
+  const conn = await db().reserve();
+  try {
+    return await loadDatasetsOn(conn as unknown as Sql, me);
+  } finally {
+    conn.release();
+  }
+}
 
-  const [members, projects, pms, mps, contents, tasks, shoots, campaigns, daily, archContents, auditRows, backupRows] = await Promise.all([
+async function loadDatasetsOn(sql: Sql, me: Me): Promise<Loaded> {
+  const admin = isAdmin(me);
+  const since = addDaysIso(tashkentDate(), -29);
+
+  const [members, projects, pms, mps, contents, tasks, shoots, campaigns, daily, archContents, auditRows, backupRows, effRows, syncRows] = await Promise.all([
     sql<R[]>`select * from members where active order by created_at, name`,
     sql<R[]>`select * from projects where archived_at is null order by created_at, name`,
     sql<R[]>`select project_id, member_id from project_pms`,
@@ -62,8 +72,20 @@ export async function loadDatasets(me: Me): Promise<Loaded> {
     sql<R[]>`select * from daily_results order by day`,
     admin ? sql<R[]>`select * from contents where archived_at is not null order by archived_at desc` : Promise.resolve([] as R[]),
     admin ? sql<R[]>`select id, at, actor_name, action, entity, summary, reverted_at, (${sql.unsafe(REVERTABLE_SQL)}) as can_revert from audit_log order by id desc limit 300` : Promise.resolve([] as R[]),
-    admin ? sql<R[]>`select id, created_at, kind, row_counts from backups order by id desc limit 60` : Promise.resolve([] as R[])
+    admin ? sql<R[]>`select id, created_at, kind, row_counts from backups order by id desc limit 60` : Promise.resolve([] as R[]),
+    sql<R[]>`
+    select m.name,
+      (select count(*) from tasks t where t.assignee_id = m.id and t.archived_at is null and t.status in ('Tayyor','Tugatildi') and (t.done_at at time zone 'Asia/Tashkent')::date >= ${since})::int as done,
+      (select count(*) from tasks t where t.assignee_id = m.id and t.archived_at is null and t.status in ('Tayyor','Tugatildi') and (t.done_at at time zone 'Asia/Tashkent')::date >= ${since} and (t.done_at at time zone 'Asia/Tashkent')::date <= t.due_on)::int as ontime,
+      (select count(*) from tasks t where t.assignee_id = m.id and t.archived_at is null and t.status in ('Boshlanmagan','Jarayonda') and t.due_on < ${tashkentDate()})::int as overdue,
+      (select coalesce(round(avg(((t.done_at at time zone 'Asia/Tashkent')::date - t.assigned_on))::numeric, 1), 0) from tasks t where t.assignee_id = m.id and t.archived_at is null and t.status in ('Tayyor','Tugatildi') and (t.done_at at time zone 'Asia/Tashkent')::date >= ${since}) as avg_days,
+      (select count(*) from contents c where c.author_id = m.id and c.archived_at is null and (c.created_at at time zone 'Asia/Tashkent')::date >= ${since})::int as created,
+      (select count(*) from contents c where c.author_id = m.id and c.archived_at is null and c.stage = 'Post Joylandi' and (c.updated_at at time zone 'Asia/Tashkent')::date >= ${since})::int as posted,
+      (select count(*) from shoots s where (s.operator_id = m.id or s.brandface_id = m.id) and s.archived_at is null and s.status = 'Tugatildi' and s.shoot_date >= ${since})::int as shoots
+    from members m where m.active ${admin ? sql`` : sql`and m.id = ${me.id}`} order by m.name`,
+    sql<{ value: { at?: string } }[]>`select value from settings where key = 'sync.last'`
   ]);
+  const syncRow = syncRows[0];
 
   const mName = new Map<string, string>(members.map((m) => [m.id, m.name]));
   const visibleProjects = admin ? projects : projects.filter((p) => me.projectIds.has(p.id));
@@ -265,20 +287,8 @@ export async function loadDatasets(me: Me): Promise<Loaded> {
     : [];
 
   // ---- samaradorlik (oxirgi 30 kun): Admin hammani, boshqalar faqat o'zini ko'radi ----
-  const since = addDaysIso(tashkentDate(), -29);
-  const effRows = await sql<R[]>`
-    select m.name,
-      (select count(*) from tasks t where t.assignee_id = m.id and t.archived_at is null and t.status in ('Tayyor','Tugatildi') and (t.done_at at time zone 'Asia/Tashkent')::date >= ${since})::int as done,
-      (select count(*) from tasks t where t.assignee_id = m.id and t.archived_at is null and t.status in ('Tayyor','Tugatildi') and (t.done_at at time zone 'Asia/Tashkent')::date >= ${since} and (t.done_at at time zone 'Asia/Tashkent')::date <= t.due_on)::int as ontime,
-      (select count(*) from tasks t where t.assignee_id = m.id and t.archived_at is null and t.status in ('Boshlanmagan','Jarayonda') and t.due_on < ${tashkentDate()})::int as overdue,
-      (select coalesce(round(avg(((t.done_at at time zone 'Asia/Tashkent')::date - t.assigned_on))::numeric, 1), 0) from tasks t where t.assignee_id = m.id and t.archived_at is null and t.status in ('Tayyor','Tugatildi') and (t.done_at at time zone 'Asia/Tashkent')::date >= ${since}) as avg_days,
-      (select count(*) from contents c where c.author_id = m.id and c.archived_at is null and (c.created_at at time zone 'Asia/Tashkent')::date >= ${since})::int as created,
-      (select count(*) from contents c where c.author_id = m.id and c.archived_at is null and c.stage = 'Post Joylandi' and (c.updated_at at time zone 'Asia/Tashkent')::date >= ${since})::int as posted,
-      (select count(*) from shoots s where (s.operator_id = m.id or s.brandface_id = m.id) and s.archived_at is null and s.status = 'Tugatildi' and s.shoot_date >= ${since})::int as shoots
-    from members m where m.active ${admin ? sql`` : sql`and m.id = ${me.id}`} order by m.name`;
   const efficiencyDs = effRows.map((r) => ({ ism: r.name, bajarildi: r.done, vaqtida: r.ontime, kechikkan: r.overdue, ortacha: Number(r.avg_days), kontent: r.created, joylangan: r.posted, syomka: r.shoots }));
 
-  const [syncRow] = await sql<{ value: { at?: string } }[]>`select value from settings where key = 'sync.last'`;
   return {
     datasets: {
       team,

@@ -48,6 +48,7 @@ type Row = {
   permissions: string[];
   telegram_chat_id: string | null;
   totp_enabled: boolean;
+  project_ids: string[];
 };
 
 /** Cookie bo'yicha joriy foydalanuvchi (yo'q bo'lsa null). */
@@ -57,23 +58,21 @@ export async function currentSession(): Promise<SessionInfo | null> {
   if (!t) return null;
   const sql = db();
   const rows = await sql<Row[]>`
-    select s.token_hash, s.mfa_ok, m.id, m.name, m.email, m.role, m.position, m.permissions, m.telegram_chat_id, m.totp_enabled
+    select s.token_hash, s.mfa_ok, m.id, m.name, m.email, m.role, m.position, m.permissions, m.telegram_chat_id, m.totp_enabled,
+      array(select project_id from member_projects where member_id = m.id union select project_id from project_pms where member_id = m.id) as project_ids
     from sessions s join members m on m.id = s.member_id
     where s.token_hash = ${sha256(t)} and s.expires_at > now() and m.active and m.kind = 'account'`;
   const r = rows[0];
   if (!r) return null;
   // last_seen ni kamdan-kam yangilaymiz
   void sql`update sessions set last_seen = now() where token_hash = ${r.token_hash} and last_seen < now() - interval '10 minutes'`.catch(() => {});
-  const proj = await sql<{ project_id: string }[]>`
-    select project_id from member_projects where member_id = ${r.id}
-    union select project_id from project_pms where member_id = ${r.id}`;
   const me: Me = {
     id: r.id,
     name: r.name,
     role: r.role,
     position: r.position,
     permissions: new Set(r.permissions || []),
-    projectIds: new Set(proj.map((p) => p.project_id)),
+    projectIds: new Set(r.project_ids || []),
     telegramChatId: r.telegram_chat_id ? Number(r.telegram_chat_id) : null
   };
   return { me, tokenHash: r.token_hash, mfaOk: r.mfa_ok, totpEnabled: r.totp_enabled, email: r.email };

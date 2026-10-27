@@ -3,6 +3,7 @@ import { loadDatasets } from '@/lib/data';
 import { ok, fail } from '@/lib/http';
 
 export const dynamic = 'force-dynamic';
+export const maxDuration = 60;
 
 export async function GET() {
   try {

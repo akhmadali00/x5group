@@ -4,6 +4,7 @@ import { isAdmin } from '@/lib/perm';
 import { ok, fail } from '@/lib/http';
 
 export const dynamic = 'force-dynamic';
+export const maxDuration = 60;
 
 /** Brauzer ishga tushganda: kim kirgan, yoki Admin yaratish / login kerakmi. */
 export async function GET() {
