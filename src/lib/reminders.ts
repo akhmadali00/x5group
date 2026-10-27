@@ -1,7 +1,8 @@
 // Vaqtli eslatmalar va hisobotlar. /api/cron/tick har daqiqada chaqiradi; har eslatma reminder_log orqali faqat bir marta yuboriladi.
 import { db, type Sql } from './db';
 import { enqueue, enqueueToAdmins, flushOutbox } from './outbox';
-import { botEnabled, esc, type Keyboard } from './telegram';
+import { botEnabled, esc, sendDocument, type Keyboard } from './telegram';
+import { monthlyReportPdf } from './monthlyReport';
 import { addDays } from './services/common';
 import { dailyBackup } from './backup';
 
@@ -158,6 +159,20 @@ async function reports(sql: Sql, t: Local) {
     const prevEnd = addDays(t.date, -1);
     const text = await periodReport(sql, prevStart, prevEnd, 'Oylik hisobot');
     for (const a of admins) await sendOnce(sql, 'monthly', t.date.slice(0, 7), a.chat, text);
+    // PDF hisobot: o'tgan oy uchun, har Admin'ga bir marta (yuborilmasa keyingi daqiqada qayta uriniladi)
+    const month = prevStart.slice(0, 7);
+    let pdf: Awaited<ReturnType<typeof monthlyReportPdf>> | null = null;
+    for (const a of admins) {
+      const ins = await sql`insert into reminder_log (kind, ref, chat_id) values ('monthly-pdf', ${month}, ${a.chat}) on conflict do nothing returning kind`;
+      if (!ins.length) continue;
+      try {
+        pdf = pdf || (await monthlyReportPdf(sql, month));
+        await sendDocument(a.chat, pdf.name, new Uint8Array(pdf.buf), pdf.summary.replace(/<[^>]+>/g, ''));
+      } catch (e) {
+        await sql`delete from reminder_log where kind = 'monthly-pdf' and ref = ${month} and chat_id = ${a.chat}`;
+        throw e;
+      }
+    }
   }
 }
 

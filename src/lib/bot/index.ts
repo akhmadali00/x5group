@@ -3,13 +3,19 @@
 import { db, type Sql } from '../db';
 import { audit } from '../audit';
 import { enqueue, adminChats } from '../outbox';
-import { answerCallback, editMessage, esc, sendMessage, type Keyboard } from '../telegram';
+import { answerCallback, editMessage, esc, sendDocument, sendMessage, type Keyboard } from '../telegram';
+import { monthlyReportPdf } from '../monthlyReport';
 import { loadMe } from '../session';
 import { updateTask } from '../services/tasks';
 import { updateContent } from '../services/contents';
 import { STAGE_NEEDS_APPROVAL } from '../notify';
 import { dayDigest, localParts } from '../reminders';
 import { askAgent, agentEnabled } from './agent';
+
+function prevMonth(): string {
+  const t = localParts().date.split('-').map(Number);
+  return new Date(Date.UTC(t[0], t[1] - 2, 1)).toISOString().slice(0, 7);
+}
 
 type R = Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
 
@@ -66,10 +72,18 @@ async function onMessage(sql: Sql, m: R) {
   if (member.telegram_status === 'blocked') return;
 
   if (cmd === '/start' || cmd === '/yordam' || cmd === '/help') {
-    await sendMessage(chat, `Salom, ${esc(member.name)}!\n\n${HELP}${member.role === 'admin' ? '\n/sorovlar — kutilayotgan ulanish so\'rovlari' : ''}`);
+    await sendMessage(chat, `Salom, ${esc(member.name)}!\n\n${HELP}${member.role === 'admin' ? '\n/sorovlar — kutilayotgan ulanish so\'rovlari\n/hisobot — oylik PDF hisobot (masalan: /hisobot 2026-10)' : ''}`);
     return;
   }
   if (cmd === '/sorovlar' && member.role === 'admin') return listRequests(sql, chat);
+  if (cmd === '/hisobot' && member.role === 'admin') {
+    const m = /^\d{4}-(0[1-9]|1[0-2])$/.test(rest[0] || '') ? rest[0] : prevMonth();
+    try {
+      const r = await monthlyReportPdf(sql, m);
+      await sendDocument(chat, r.name, new Uint8Array(r.buf), r.summary.replace(/<[^>]+>/g, ''));
+    } catch (e) { console.error('[x5] hisobot', e); await sendMessage(chat, 'Hisobotni tayyorlab bo\'lmadi. Keyinroq urinib ko\'ring.'); }
+    return;
+  }
 
   if (member.kind !== 'account') {
     if (cmd === '/syomkalar') return sendShoots(sql, chat, member);

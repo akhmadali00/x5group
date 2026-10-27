@@ -100,5 +100,15 @@ check('morning digest for operator', to(log, 1003).some((x) => /Bugungi syomka/.
 // zaxira: 03:00 dan keyin
 await tglog(); t1 = await tick('2099-01-06T00:10:00Z'); await sleep(500); log = await tglog();
 check('daily backup file sent to admin', log.some((x) => x.method === 'sendDocument' && String(x.body.head).includes('x5group-zaxira')), { t1, methods: log.map((x) => x.method) });
+// oylik PDF hisobot: 1-sanada 09:00-12:00 oralig'ida Admin'ga bir marta
+await tglog(); t1 = await tick('2099-02-01T05:00:00Z'); await sleep(800); log = await tglog();
+check('monthly PDF sent to admin', log.some((x) => x.method === 'sendDocument' && String(x.body.head).includes('x5group-hisobot-2099-01')), { t1, methods: log.map((x) => x.method), heads: log.filter((x) => x.method === 'sendDocument').map((x) => String(x.body.head).slice(0, 120)) });
+await tglog(); t1 = await tick('2099-02-01T05:01:00Z'); await sleep(500); log = await tglog();
+check('monthly PDF not repeated', !log.some((x) => x.method === 'sendDocument' && String(x.body.head).includes('hisobot')), log.map((x) => x.method));
+await tglog(); await hook(msg(1001, '/hisobot 2099-01')); await sleep(800); log = await tglog();
+check('/hisobot command sends PDF to admin', log.some((x) => x.method === 'sendDocument' && String(x.body.head).includes('x5group-hisobot-2099-01')), log.map((x) => x.method));
+await hook(msg(1002, '/hisobot')); await sleep(300); log = await tglog();
+check('/hisobot refused for non-admin', !log.some((x) => x.method === 'sendDocument'), log.map((x) => x.method));
+r = await call('GET', '/api/reports/monthly?month=2099-01'); check('report download route (admin)', r.status === 200 || r.j === null, r);
 for (const x of results) console.log(...x);
 process.exit(results.some((x) => x[0] === 'FAIL') ? 1 : 0);

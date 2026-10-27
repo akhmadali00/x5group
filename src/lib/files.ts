@@ -93,3 +93,56 @@ export async function readTable(buf: Buffer, name: string): Promise<string[][]> 
   const rows = (await readSheet(buf)) as unknown[][];
   return rows.map((r) => r.map((c) => (c === null || c === undefined ? '' : c instanceof Date ? c.toISOString().slice(0, 10) : String(c)))).filter((r) => r.some((c) => c.trim() !== ''));
 }
+
+export type Section = { heading: string; lines?: string[]; table?: { columns: string[]; rows: string[][] } };
+
+/** Bir necha bo'limli hisobot PDF (A4 tik). */
+export function toPdfReport(title: string, subtitle: string, sections: Section[]): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    const doc = new PDFDocument({ size: 'A4', margin: 40, info: { Title: title } });
+    const chunks: Buffer[] = [];
+    doc.on('data', (c: Buffer) => chunks.push(c));
+    doc.on('end', () => resolve(Buffer.concat(chunks)));
+    doc.on('error', reject);
+    doc.registerFont('r', FONT());
+    doc.registerFont('b', FONT_B());
+    const W = doc.page.width - 80;
+    const bottom = () => doc.page.height - 50;
+    doc.font('b').fontSize(18).text(title);
+    doc.font('r').fontSize(10).fillColor('#666').text(subtitle).fillColor('#000');
+    for (const sec of sections) {
+      if (doc.y > bottom() - 60) doc.addPage();
+      doc.x = 40;
+      doc.moveDown(1);
+      doc.font('b').fontSize(12).text(sec.heading, 40, doc.y);
+      doc.moveDown(0.3);
+      doc.font('r').fontSize(10);
+      for (const l of sec.lines || []) doc.text(l, 40, doc.y, { width: W });
+      const t = sec.table;
+      if (!t || !t.columns.length) continue;
+      const first = Math.min(0.34, 0.9 / t.columns.length + 0.1);
+      const cw = t.columns.map((_, i) => (i === 0 ? W * first : (W * (1 - first)) / Math.max(1, t.columns.length - 1)));
+      const head = () => {
+        const y = doc.y;
+        doc.font('b').fontSize(8.5);
+        let x = 40;
+        t.columns.forEach((c, i) => { doc.text(c, x + 2, y, { width: cw[i] - 4 }); x += cw[i]; });
+        const h = Math.max(...t.columns.map((c, i) => doc.heightOfString(c, { width: cw[i] - 4 })));
+        doc.moveTo(40, y + h + 2).lineTo(40 + W, y + h + 2).strokeColor('#999').lineWidth(0.5).stroke();
+        doc.y = y + h + 5;
+        doc.font('r').fontSize(9);
+      };
+      head();
+      for (const r of t.rows) {
+        const h = Math.max(...r.map((c, i) => doc.heightOfString(String(c ?? ''), { width: cw[i] - 4 })), 11);
+        if (doc.y + h > bottom()) { doc.addPage(); head(); }
+        const y = doc.y;
+        let x = 40;
+        r.forEach((c, i) => { doc.text(String(c ?? ''), x + 2, y, { width: cw[i] - 4 }); x += cw[i]; });
+        doc.y = y + h + 3;
+        doc.moveTo(40, doc.y - 1).lineTo(40 + W, doc.y - 1).strokeColor('#eee').lineWidth(0.4).stroke();
+      }
+    }
+    doc.end();
+  });
+}
