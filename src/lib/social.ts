@@ -6,7 +6,7 @@ import { syncMeta, metaEnabled, type SyncResult } from './meta';
 
 type R = Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
 
-const handleOf = (link: string | null | undefined, hosts: RegExp): string | null => {
+export const handleOf = (link: string | null | undefined, hosts: RegExp): string | null => {
   const s = String(link || '').trim();
   if (!s) return null;
   if (/^@?[\w.]+$/.test(s)) return s.replace(/^@/, '');

@@ -63,6 +63,7 @@ Qo'shimcha: `vercel.json` da kuniga bir marta ishlaydigan zaxira chaqiruv bor (V
 - Har 3 soatda reklama (Meta) va obunachilar soni yangilanadi; Admin botda `/yangila` yozsa darhol yangilanadi.
 - Reklama signallari: natijasiz kampaniya, o'rtachadan 1.5× qimmat CPR va o'rtachadan ancha arzon (byudjetni oshirish mumkin) kampaniyalar haqida PM va Adminga haftada bir marta xabar keladi.
 - Oylik PDF hisobot har oyning 1-kuni ertalab Adminga Telegramda keladi; istalgan oyni `/hisobot 2026-10` deb so'rash mumkin.
+- Telegram kanalga avtomatik joylash: kontent «Tasdiqlandi» bosqichida, **«Belgilangan vaqtda bot o'zi joylasin»** belgilangan bo'lsa, bot belgilangan vaqtda loyihaning Telegram kanaliga joylaydi. Buning uchun: loyihada kanal havolasi (`t.me/nom`, ochiq kanal) bo'lsin va botni shu kanalga **administrator** qiling (xabar yuborish huquqi bilan). Matn sifatida Telegram izohi (caption), bo'lmasa Hook + Main Body + CTA olinadi; material havolasi to'g'ridan-to'g'ri rasm/video (.jpg, .png, .mp4) bo'lsa fayl bilan, aks holda havola matn bilan yuboriladi. Vaqt 3 soatdan ko'p o'tib ketgan bo'lsa bot o'zi joylamaydi (Adminga xabar beradi). Muvaffaqiyatsiz bo'lsa 3 marta uriniladi, keyin PM va Adminga sabab yuboriladi.
 - Telefonga o'rnatish: sayt manzilini telefonda oching → brauzer menyusidan **«Bosh ekranga qo'shish»**. Bot ichida ham **Platforma** tugmasi paydo bo'ladi (Webhookni o'rnatganingizdan keyin).
 
 ## 7. Xavfsizlik

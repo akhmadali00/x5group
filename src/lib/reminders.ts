@@ -4,6 +4,7 @@ import { enqueue, enqueueToAdmins, flushOutbox } from './outbox';
 import { botEnabled, esc, sendDocument, type Keyboard } from './telegram';
 import { monthlyReportPdf } from './monthlyReport';
 import { syncAll } from './social';
+import { autoPost } from './autopost';
 import { addDays } from './services/common';
 import { dailyBackup } from './backup';
 
@@ -197,6 +198,7 @@ export async function runTick(now = new Date()) {
   for (const [name, fn] of [
     ['evening', () => eveningShoots(sql, t)],
     ['morning', () => morning(sql, t)],
+    ['autopost', async () => { await autoPost(sql, t); }],
     ['posts', () => postReminders(sql, t)],
     ['reports', () => reports(sql, t)],
     ['backup', () => dailyBackup(sql, t)],
