@@ -47,8 +47,8 @@ Telegram kanal obunachilari uchun qo'shimcha kalit kerak emas: kanal havolasi oc
 ## 5. Botni ulash
 
 1. Saytda **Arxiv → Bot** bo'limiga kiring. Hamma qator ✅ bo'lishi kerak, so'ng **«Webhookni o'rnatish»** ni bosing.
-2. O'ng yuqoridagi ismingiz → **Mening sahifam → Telegramni ulash** → chiqqan havolani Telegramda oching → **Start**. Endi bot sizni Admin sifatida taniydi.
-3. Jamoa a'zolari uchun: **Jamoa → a'zoni oching → Telegramni ulash** → havolani shu a'zoga yuboring. Yoki a'zo botga o'zi `/start` yozadi, siz botdan kelgan xabardagi tugma bilan kimligini tanlab tasdiqlaysiz.
+2. **Jamoa → o'zingizning ismingiz → Tahrirlash → Telegramni ulash** → chiqqan havolani Telegramda oching → **Start**. Endi bot sizni Admin sifatida taniydi.
+3. Jamoa a'zolari uchun: **Jamoa → a'zoni oching → Tahrirlash → Telegramni ulash** → havolani shu a'zoga yuboring. Yoki a'zo botga o'zi `/start` yozadi, siz botdan kelgan xabardagi tugma bilan kimligini tanlab tasdiqlaysiz.
 
 ## 6. Eslatmalar (har daqiqalik tekshiruv)
 
@@ -68,7 +68,7 @@ Qo'shimcha: `vercel.json` da kuniga bir marta ishlaydigan zaxira chaqiruv bor (V
 
 ## 7. Xavfsizlik
 
-- **Mening sahifam → 2 bosqichli kirish → Yoqish** (Google Authenticator bilan). Admin uchun tavsiya etiladi.
+- **Jamoa → o'z ismingiz → Tahrirlash → 2 bosqichli kirish → Yoqish** (Google Authenticator bilan). Admin uchun tavsiya etiladi.
 - Token va parollarni chatga, GitHub'ga yozmang. Agar tasodifan oshkor bo'lsa, tokenni @BotFather'da `/revoke` qiling, Supabase'da parolni almashtiring.
 
 ## 8. Zaxira
