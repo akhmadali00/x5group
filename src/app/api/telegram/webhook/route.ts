@@ -45,7 +45,10 @@ export async function POST(req: Request) {
     const base = (process.env.APP_URL || `${proto}://${host}`).replace(/\/$/, '');
     if (!base.startsWith('https://')) throw bad('Telegram webhook faqat https manzilda ishlaydi (Vercel manzilida ochib qayta urining)');
     await setWebhook(`${base}/api/telegram`, secret);
-    return ok({ url: `${base}/api/telegram` });
+    // Bot menyusidagi tugma: platformani Telegram ichida (Mini App) ochadi
+    let menu = true;
+    try { await tg('setChatMenuButton', { menu_button: { type: 'web_app', text: 'Platforma', web_app: { url: base } } }); } catch { menu = false; }
+    return ok({ url: `${base}/api/telegram`, menu });
   } catch (e) {
     return fail(e);
   }

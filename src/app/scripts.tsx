@@ -11,6 +11,7 @@ declare global {
 /** Ilova skriptlari React gidratsiyadan KEYIN, tartib bilan yuklanadi (DOM'ni gidratsiyadan oldin o'zgartirmaslik uchun). */
 export function Scripts() {
   useEffect(() => {
+    if (process.env.NODE_ENV === 'production' && 'serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
     if (window.__x5loaded) return;
     window.__x5loaded = true;
     (async () => {
