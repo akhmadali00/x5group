@@ -1,4 +1,4 @@
-import { db, type Sql } from './db';
+import { db, limitedAll, type Sql } from './db';
 import { can, isAdmin, TARGET_ROLES, type Me } from './perm';
 import { REVERTABLE_SQL } from './services/history';
 
@@ -54,7 +54,7 @@ async function loadDatasetsOn(sql: Sql, me: Me): Promise<Loaded> {
   const admin = isAdmin(me);
   const since = addDaysIso(tashkentDate(), -29);
 
-  const [members, projects, pms, mps, contents, tasks, shoots, campaigns, daily, archContents, auditRows, backupRows, effRows, syncRows] = await Promise.all([
+  const [members, projects, pms, mps, contents, tasks, shoots, campaigns, daily, archContents, auditRows, backupRows, effRows, syncRows] = await limitedAll([
     sql<R[]>`select * from members where active order by created_at, name`,
     sql<R[]>`select * from projects where archived_at is null order by created_at, name`,
     sql<R[]>`select project_id, member_id from project_pms`,
@@ -78,7 +78,7 @@ async function loadDatasetsOn(sql: Sql, me: Me): Promise<Loaded> {
       (select count(*) from shoots s where (s.operator_id = m.id or s.brandface_id = m.id) and s.archived_at is null and s.status = 'Tugatildi' and s.shoot_date >= ${since})::int as shoots
     from members m where m.active ${admin ? sql`` : sql`and m.id = ${me.id}`} order by m.name`,
     sql<{ value: { at?: string } }[]>`select value from settings where key = 'sync.last'`
-  ]);
+  ] as const);
   const syncRow = syncRows[0];
 
   const mName = new Map<string, string>(members.map((m) => [m.id, m.name]));
