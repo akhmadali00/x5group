@@ -1,0 +1,31 @@
+{
+  "name": "x5group",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit",
+    "test": "node --experimental-strip-types --test tests/*.test.ts",
+    "predev": "node scripts/gen-markup.mjs",
+    "prebuild": "node scripts/gen-markup.mjs",
+    "pretypecheck": "node scripts/gen-markup.mjs"
+  },
+  "dependencies": {
+    "d3-format": "^3.1.2",
+    "next": "^15.5.0",
+    "postgres": "^3.4.9",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "zod": "^3.25.0"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.5.12",
+    "@electric-sql/pglite-socket": "^0.2.15",
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.1.0",
+    "@types/react-dom": "^19.1.0",
+    "typescript": "^5.7.0"
+  }
+}

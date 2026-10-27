@@ -1,0 +1,279 @@
+<div class="lx-bar">
+  <div class="lx-brand" aria-label="X5"><span class="lx-mark" role="img" aria-label="X5"></span></div>
+  <div class="lx-seg lx-tabs" role="tablist" aria-label="Sahifalar">
+    <button type="button" role="tab" data-page="bosh" aria-selected="true">Bosh menu</button>
+    <button type="button" role="tab" data-page="loyihalar" aria-selected="false">Loyihalar</button>
+    <button type="button" role="tab" data-page="target" aria-selected="false">Target</button>
+    <button type="button" role="tab" data-page="vazifalar" aria-selected="false">Vazifalar</button>
+    <button type="button" role="tab" data-page="syomkalar" aria-selected="false">Syomkalar</button>
+    <button type="button" role="tab" data-page="jamoa" aria-selected="false">Jamoa</button>
+    <button type="button" role="tab" data-page="arxiv" data-admin aria-selected="false">Arxiv</button>
+  </div>
+  <div class="lx-right">
+  <button type="button" class="lx-bell" data-act="notif" aria-haspopup="true" aria-label="Bildirishnomalar"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg><span class="lx-bcount" hidden></span></button>
+  <div class="lx-notifs" hidden role="dialog" aria-label="Bildirishnomalar"></div>
+  <button type="button" class="lx-acct" data-act="menu" aria-haspopup="menu" aria-label="Hisob menyusi"><span class="lx-avatar lx-acct-av dash-skeleton"></span><span class="lx-acct-name"></span><span class="lx-acct-role"></span></button>
+  <div class="lx-menu" role="menu" hidden>
+    <button type="button" role="menuitem" data-act="go-me">Mening sahifam</button>
+    <button type="button" role="menuitem" data-act="go-login">Chiqish</button>
+  </div>
+  <div class="lx-seg lx-modes" role="group" aria-label="Ko'rinish rejimi">
+    <button type="button" data-mode="light" aria-pressed="false" aria-label="Kunduzgi rejim" title="Kunduzgi rejim">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+    </button>
+    <button type="button" data-mode="dark" aria-pressed="false" aria-label="Tungi rejim" title="Tungi rejim">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+    </button>
+  </div>
+  <button type="button" class="lx-burger" data-act="nav" aria-label="Menyu" aria-expanded="false"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+  </div>
+</div>
+<button type="button" class="lx-back" hidden aria-label="Orqaga" title="Orqaga"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg></button>
+
+<div class="lx-page" id="bosh">
+  <h1>Bosh menu</h1>
+
+  <section class="lx-tiles" id="umumiy" data-card="bosh.umumiy">
+    <div class="lx-tile"><div class="lx-lab">Loyihalar</div><div class="lx-big dash-skeleton" data-source="totals" data-field="loyihalar" data-row="0">—</div></div>
+    <div class="lx-tile"><div class="lx-lab">Umumiy bajarilish</div><div class="lx-big dash-skeleton" data-source="totals" data-field="foiz" data-row="0">—</div><div class="lx-note"><span data-source="totals" data-field="bajarildi" data-row="0">—</span>/<span data-source="totals" data-field="jami" data-row="0">—</span> ish</div></div>
+    <div class="lx-tile"><div class="lx-lab">Zaxira (jami)</div><div class="lx-big dash-skeleton" data-source="totals" data-field="zaxira" data-row="0">—</div></div>
+    <div class="lx-tile"><div class="lx-lab">G'oyalar (jami)</div><div class="lx-big dash-skeleton" data-source="totals" data-field="goyalar" data-row="0">—</div></div>
+  </section>
+
+
+  <section class="lx-board" id="holat" data-card="bosh.loyihalar">
+    <h2>Loyihalar</h2>
+    <div class="lx-list">
+      <div class="lx-head"><div>Loyiha</div><div>Bajarildi</div><div>Target videolar</div><div>Target</div></div>
+      <div class="lx-rows"></div>
+    </div>
+  </section>
+
+  <section class="lx-board" id="bugun" data-card="bosh.bugun">
+    <h2>Bugun joylanadiganlar</h2>
+    <div class="lx-plist"></div>
+    <p class="lx-psum" id="bugun-sum"></p>
+  </section>
+</div>
+
+<div class="lx-page" id="loyihalar" hidden>
+  <div class="lx-pagehead">
+    <div>
+      <h1>Loyihalar</h1>
+    </div>
+    <button type="button" class="lx-btn primary" data-admin data-act="toggle-project">+ Yangi loyiha</button>
+  </div>
+  <div class="lx-sheet" id="project-sheet" hidden>
+    <h3>Yangi loyiha</h3>
+    <div class="lx-fgrid">
+      <div class="lx-field"><label>Loyiha nomi</label><input type="text" placeholder="Loyiha nomi" autocomplete="off"></div>
+      <div class="lx-field lx-wide"><label>Mas'ul PM</label><div class="lx-check-row" id="proj-new-pm"></div></div>
+      <div class="lx-field"><label>Shartnoma boshlangan sana</label><input type="date" id="proj-start" min="2000-01-01" max="2099-12-31"></div>
+      <div class="lx-field"><label>Muddat (oy)</label><input type="number" id="proj-months" min="1" max="60" placeholder="3"></div>
+      <div class="lx-field"><label>Tugash sanasi (avtomatik)</label><input type="text" id="proj-end" readonly placeholder="Sana va muddatni kiriting" tabindex="-1"></div>
+      <div class="lx-field"><label>Kontentlar soni</label><input type="number" min="0" placeholder="30"></div>
+      <div class="lx-field"><label>Targetga kontentlar soni (ixtiyoriy)</label><input type="number" min="0" placeholder="15"></div>
+      <div class="lx-field"><label>Loyiha egasi: ism-familya</label><input type="text" placeholder="Ism Familya" autocomplete="off"></div>
+      <div class="lx-field"><label data-ico="phone">Telefon raqami</label><input type="tel" placeholder="+998 90 123 45 67" autocomplete="off"></div>
+      <div class="lx-field"><label data-ico="telegram">Username</label><input type="text" placeholder="@username" autocomplete="off"></div>
+      <div class="lx-field"><label data-ico="instagram">Username (agar bo'lsa)</label><input type="text" placeholder="@username" autocomplete="off"></div>
+      <div class="lx-field lx-wide lx-sechead"><label>Ijtimoiy tarmoqlar va qamrov</label><p class="lx-hint2">Faqat biz yuritadigan tarmoqlarni to'ldiring: sahifa havolasi va loyiha olingan paytdagi obunachilar soni. Hozirgi son shu havola orqali har kuni avtomatik yangilanadi, o'sish «+» bilan ko'rsatiladi.</p></div>
+      <div class="lx-field"><label data-ico="instagram">Instagram sahifa havolasi</label><input type="text" id="proj-ig-link" placeholder="instagram.com/nom yoki @nom" autocomplete="off"></div>
+      <div class="lx-field"><label data-ico="instagram">Instagram obunachilari</label><input type="number" id="proj-ig" min="0" placeholder="12000"></div>
+      <div class="lx-field"><label data-ico="telegram">Telegram kanal havolasi</label><input type="text" id="proj-tg-link" placeholder="t.me/nom yoki @nom" autocomplete="off"></div>
+      <div class="lx-field"><label data-ico="telegram">Telegram obunachilari</label><input type="number" id="proj-tg" min="0" placeholder="3000"></div>
+      <div class="lx-field"><label data-ico="youtube">YouTube kanal havolasi</label><input type="text" id="proj-yt-link" placeholder="youtube.com/@nom" autocomplete="off"></div>
+      <div class="lx-field"><label data-ico="youtube">YouTube obunachilari</label><input type="number" id="proj-yt" min="0" placeholder="1000"></div>
+      <div class="lx-field"><label>Oylik qamrov (ko'rishlar soni)</label><input type="number" id="proj-oxvat" min="0" placeholder="150000"></div>
+      <div class="lx-field lx-wide lx-sechead"><label>Target ma'lumot manbasi</label><p class="lx-hint2">Kampaniyalar va ko'rsatkichlar (Amount Spent, Results, Hook, Hold) shu manbadan olinadi. Token va parollar bu yerga yozilmaydi — ular serverda xavfsiz saqlanadi.</p></div>
+      <div class="lx-field"><label>Manba</label><select><option>Meta Ads API</option><option>Google Sheets</option><option>Boshqa API</option><option>Qo'lda kiritaman</option></select></div>
+      <div class="lx-field"><label>Reklama akkaunti ID (act_...) yoki havola</label><input type="text" placeholder="act_1234567890" autocomplete="off"></div>
+      <div class="lx-field"><label>Business portfolio nomi (ixtiyoriy)</label><input type="text" placeholder="Masalan, Mijoz Portfolio" autocomplete="off"></div>
+    </div>
+    <div class="lx-actions">
+      <span class="lx-hint"></span>
+      <button type="button" class="lx-btn" data-act="cancel-project">Bekor qilish</button>
+      <button type="button" class="lx-btn primary" data-act="save-mock">Qo'shish</button>
+    </div>
+  </div>
+
+  <div class="lx-seg lx-ptabs" role="tablist" aria-label="Loyiha holati"></div>
+  <section class="lx-board" id="bosqichlar" data-card="loyihalar.royxat">
+    <div class="lx-projcards"></div>
+  </section>
+</div>
+
+<div class="lx-page" id="target" hidden>
+  <h1>Target</h1>
+
+  <div class="lx-seg lx-ttabs" role="tablist"></div>
+
+  <section class="lx-board" id="target-umumiy" data-card="target.umumiy">
+    <h2>Umumiy ko'rsatkichlar</h2>
+    <div class="lx-list lx-tsum"></div>
+    <p class="lx-psum" id="target-sync"></p>
+  </section>
+
+  <section class="lx-board" id="kampaniyalar" data-card="target.kampaniyalar">
+    <h2>Kampaniyalar</h2>
+    <div class="lx-targetrows"></div>
+  </section>
+</div>
+
+<div class="lx-page" id="vazifalar" hidden>
+  <div class="lx-pagehead">
+    <div>
+      <h1>Vazifalar</h1>
+    </div>
+    <button type="button" class="lx-btn primary" data-admin data-act="toggle-task">+ Yangi vazifa</button>
+  </div>
+  <div class="lx-sheet" id="task-sheet" hidden>
+    <h3>Yangi vazifa</h3>
+    <div class="lx-fgrid">
+      <div class="lx-field"><label>Kimga</label><select id="task-new-who"></select></div>
+      <div class="lx-field"><label>Nima vazifa</label><input type="text" placeholder="Vazifa nomi" autocomplete="off"></div>
+      <div class="lx-field lx-wide"><label>Izoh</label><textarea rows="3" placeholder="Vazifa bajarilishi haqida ma'lumot (keyinroq mas'ul a'zo ham to'ldirishi mumkin)"></textarea></div>
+      <div class="lx-field"><label>Muddat (kun)</label><input type="number" id="task-new-days" min="1" max="365" placeholder="3"></div>
+      <div class="lx-field"><label>Topshirish sanasi (avtomatik)</label><input type="text" id="task-new-date" readonly placeholder="Muddatni kiriting" tabindex="-1"></div>
+      <div class="lx-field"><label>Holat</label><select><option>Boshlanmagan</option><option>Jarayonda</option><option>Tayyor</option><option>Tugatildi</option></select></div>
+    </div>
+    <div class="lx-actions">
+      <span class="lx-hint"></span>
+      <button type="button" class="lx-btn" data-act="cancel-task">Bekor qilish</button>
+      <button type="button" class="lx-btn primary" data-act="save-mock">Qo'shish</button>
+    </div>
+  </div>
+  <section class="lx-tiles" id="vazifa-jami" data-card="vazifalar.korsatkich">
+    <div class="lx-tile"><div class="lx-lab">Jami</div><div class="lx-big dash-skeleton" data-source="task_totals" data-field="jami" data-row="0">—</div></div>
+    <div class="lx-tile"><div class="lx-lab">Jarayonda</div><div class="lx-big dash-skeleton" data-source="task_totals" data-field="jarayonda" data-row="0">—</div></div>
+    <div class="lx-tile"><div class="lx-lab">Kechikkan</div><div class="lx-big dash-skeleton" data-source="task_totals" data-field="kechikkan" data-row="0">—</div></div>
+    <div class="lx-tile"><div class="lx-lab">Tasdiq kutmoqda</div><div class="lx-big dash-skeleton" data-source="task_totals" data-field="tayyor" data-row="0">—</div></div>
+  </section>
+  <section class="lx-board" id="vazifa-royxat" data-card="vazifalar.royxat">
+    <div class="lx-list">
+      <div class="lx-vhead"><div>Kimga</div><div>Nima vazifa</div><div>Izoh</div><div class="r">Muddat</div><div class="r">Topshiriladi</div><div>Qolgan vaqt</div><div>Holat</div><div></div></div>
+      <div class="lx-taskrows"></div>
+    </div>
+  </section>
+</div>
+
+<div class="lx-page" id="syomkalar" hidden>
+  <div class="lx-pagehead">
+    <div>
+      <h1>Syomkalar</h1>
+    </div>
+    <button type="button" class="lx-btn primary" data-admin data-act="toggle-shoot">+ Yangi syomka</button>
+  </div>
+  <div class="lx-sheet" id="shoot-sheet" hidden>
+    <h3>Yangi syomka</h3>
+    <div class="lx-fgrid">
+      <div class="lx-field"><label>Mijoz<span class="lx-req">*</span></label><select id="shoot-new-client" data-req></select></div>
+      <div class="lx-field"><label>Qayerda<span class="lx-req">*</span></label><input type="text" placeholder="Joy nomi" autocomplete="off" data-req></div>
+      <div class="lx-field"><label>Sana<span class="lx-req">*</span></label><input type="date" min="2000-01-01" max="2099-12-31" data-req></div>
+      <div class="lx-field"><label>Soat<span class="lx-req">*</span></label><input type="time" data-req></div>
+      <div class="lx-field"><label>Operator<span class="lx-req">*</span></label><select id="shoot-new-op" data-req></select></div>
+      <div class="lx-field"><label>Brandface (ixtiyoriy)</label><select id="shoot-new-bf"></select></div>
+      <div class="lx-field"><label>Holat<span class="lx-req">*</span></label><select data-req><option>Rejada</option><option>Tugatildi</option><option>Bekor bo'ldi</option><option>Ko'chirildi</option></select></div>
+      <div class="lx-field"><label>Qo'shimcha (ixtiyoriy)</label><input type="text" placeholder="Kerakli narsalar, esdan chiqmasin" autocomplete="off"></div>
+    </div>
+    <div class="lx-actions">
+      <span class="lx-hint"></span>
+      <button type="button" class="lx-btn" data-act="cancel-shoot">Bekor qilish</button>
+      <button type="button" class="lx-btn primary" data-act="save-shoot">Qo'shish</button>
+    </div>
+  </div>
+  <section class="lx-tiles" id="syomka-jami" data-card="syomkalar.korsatkich">
+    <div class="lx-tile"><div class="lx-lab">Bugun</div><div class="lx-big dash-skeleton" data-source="shoot_totals" data-field="bugun" data-row="0">—</div></div>
+    <div class="lx-tile"><div class="lx-lab">Ertaga</div><div class="lx-big dash-skeleton" data-source="shoot_totals" data-field="ertaga" data-row="0">—</div></div>
+    <div class="lx-tile"><div class="lx-lab">Shu hafta</div><div class="lx-big dash-skeleton" data-source="shoot_totals" data-field="hafta" data-row="0">—</div></div>
+    <div class="lx-tile"><div class="lx-lab">Rejadagi (jami)</div><div class="lx-big dash-skeleton" data-source="shoot_totals" data-field="rejada" data-row="0">—</div></div>
+  </section>
+  <section class="lx-board" id="syomka-royxat" data-card="syomkalar.rejada">
+    <h2>Barcha syomkalar</h2>
+    <div class="lx-list">
+      <div class="lx-xhead"><div>Mijoz</div><div>Qayerda</div><div>Qachon</div><div>Operator</div><div>Brandface</div><div>Holat</div><div>Qo'shimcha</div><div></div></div>
+      <div class="lx-shootrows"></div>
+    </div>
+  </section>
+</div>
+
+<div class="lx-page" id="jamoa" hidden>
+  <div class="lx-pagehead">
+    <div>
+      <h1>Jamoa</h1>
+    </div>
+    <button type="button" class="lx-btn primary" data-admin data-act="toggle-member">+ A'zo qo'shish</button>
+  </div>
+  <section class="lx-board" id="a-zolar" data-card="jamoa.azolar">
+    <h2>A'zolar</h2>
+    <div class="lx-list">
+      <div class="lx-mhead"><div>A'zo</div><div>Lavozim</div><div>Rol</div><div>Loyihalar</div><div data-ico="phone" data-only></div><div data-ico="telegram" data-only></div><div></div></div>
+      <div class="lx-memrows"></div>
+    </div>
+  </section>
+  <section class="lx-board" id="frilans" data-card="jamoa.frilans">
+    <h2>Frilans</h2>
+    <div class="lx-list">
+      <div class="lx-fhead"><div>Ism</div><div>Kasbi</div><div data-ico="phone" data-only></div><div data-ico="telegram" data-only></div><div></div></div>
+      <div class="lx-frilrows"></div>
+    </div>
+  </section>
+</div>
+
+<div class="lx-page" id="arxiv" hidden>
+  <div class="lx-pagehead">
+    <div>
+      <h1>Arxiv</h1>
+    </div>
+  </div>
+  <div class="lx-seg lx-ttabs lx-atabs" role="tablist" aria-label="Arxiv bo'limlari"></div>
+  <section class="lx-board" id="arxiv-royxat"></section>
+</div>
+
+<div class="lx-page" id="azo" hidden>
+  <div class="lx-member"></div>
+</div>
+
+<div class="lx-page" id="kirish" hidden>
+  <div class="lx-login">
+    <span class="lx-mark big" role="img" aria-label="X5"></span>
+    <h1>Xush kelibsiz</h1>
+    <p class="lx-sub">Hisobingiz bilan kiring</p>
+    <div class="lx-field"><label>Email</label><input type="email" id="login-email" placeholder="ism@pochta.uz" autocomplete="off"></div>
+    <div class="lx-field"><label>Parol</label><input type="password" id="login-pass" placeholder="Parol" autocomplete="off"></div>
+    <p class="lx-loginerr" id="login-err" hidden></p>
+    <button type="button" class="lx-btn primary" data-act="login">Kirish</button>
+    <p class="lx-fine">Parolni unutgan bo'lsangiz, Admin yangisini o'rnatib beradi.</p>
+  </div>
+</div>
+
+<div class="lx-page" id="mfa" hidden>
+  <div class="lx-login">
+    <span class="lx-mark big" role="img" aria-label="X5"></span>
+    <h1>Tasdiqlash kodi</h1>
+    <p class="lx-sub">Autentifikator ilovangizdagi 6 xonali kodni kiriting</p>
+    <div class="lx-field"><label>Kod</label><input type="text" id="mfa-code" inputmode="numeric" autocomplete="one-time-code" maxlength="10" placeholder="123456"></div>
+    <p class="lx-loginerr" id="mfa-err" hidden></p>
+    <button type="button" class="lx-btn primary" data-act="mfa-verify">Tasdiqlash</button>
+    <p class="lx-fine"><a role="button" tabindex="0" class="lx-forgot" data-act="mfa-back">Boshqa hisob bilan kirish</a></p>
+  </div>
+</div>
+
+<div class="lx-page" id="boshlash" hidden>
+  <div class="lx-login">
+    <span class="lx-mark big" role="img" aria-label="X5"></span>
+    <h1>Platformaga xush kelibsiz</h1>
+    <p class="lx-sub">Birinchi ishga tushirish. Hozir yaratgan hisobingiz Admin bo'ladi. Loyihalar, jamoa va qolgan hamma narsani keyin o'zingiz qo'shasiz.</p>
+    <div class="lx-field"><label>Ismingiz</label><input type="text" id="setup-name" placeholder="Ism" autocomplete="off"></div>
+    <div class="lx-field"><label>Email</label><input type="email" id="setup-email" placeholder="ism@pochta.uz" autocomplete="off"></div>
+    <div class="lx-field"><label>Parol</label><input type="password" id="setup-pass" placeholder="Kamida 8 belgi" autocomplete="off"></div>
+    <div class="lx-field"><label>Parolni takrorlang</label><input type="password" id="setup-pass2" placeholder="Parolni takrorlang" autocomplete="off"></div>
+    <p class="lx-loginerr" id="setup-err" hidden></p>
+    <button type="button" class="lx-btn primary" data-act="setup-admin">Admin hisobini yaratish</button>
+    <p class="lx-fine">Faqat birinchi foydalanuvchi shu yerdan Admin bo'ladi. Keyingi a'zolarni Admin «Jamoa» bo'limidan qo'shadi.</p>
+  </div>
+</div>
+
+<div class="lx-page" id="loyiha" hidden>
+  <div class="lx-detail"></div>
+</div>
