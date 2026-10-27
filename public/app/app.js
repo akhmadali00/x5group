@@ -1186,9 +1186,9 @@
       if (noteNode) t.append(noteNode);
       tiles.append(t);
     };
-    tile('Kontentlar', el('div', 'lx-big', fmtInt(stat.kontent), mk('project_stats', 'kontent', name)), note(prof ? prof.kontentlar : 0, 'profiles', 'kontentlar', ' ta rejadan'));
+    tile('Kontentlar', el('div', 'lx-big', fmtInt(stat.kontent), mk('project_stats', 'kontent', name)), prof && prof.kontentlar !== undefined && prof.kontentlar !== '' && isFinite(Number(prof.kontentlar)) ? note(prof.kontentlar, 'profiles', 'kontentlar', ' ta rejadan') : null);
     tile('Rekda', el('div', 'lx-big n-gold', fmtInt(stat.rekda), mk('project_stats', 'rekda', name)));
-    tile('Targetga', el('div', 'lx-big', fmtInt(stat.target), mk('project_stats', 'target', name)), prof && prof.targetga !== undefined && prof.targetga !== '' ? note(prof.targetga, 'profiles', 'targetga', ' ta rejadan') : null);
+    tile('Targetga', el('div', 'lx-big', fmtInt(stat.target), mk('project_stats', 'target', name)), prof && prof.targetga !== undefined && prof.targetga !== '' && isFinite(Number(prof.targetga)) ? note(prof.targetga, 'profiles', 'targetga', ' ta rejadan') : null);
     detailBox.append(tiles);
 
     // Loyiha ma'lumotlari kartasi
@@ -1313,7 +1313,10 @@
       selAllBtn.textContent = all ? 'Belgilashni bekor qilish' : 'Hammasini belgilash';
       selAllBtn.hidden = n === 0;
     };
-    filters.append(wrapStage, wrapPerson, wrapPlat, selAllBtn, expBtn, el('button', 'lx-btn primary', '+ Yangi kontent', { type: 'button', 'data-act': 'toggle-content' }));
+    const impBtn = el('button', 'lx-btn lx-fexport', null, { type: 'button', title: "Excel yoki CSV fayldan kontentlarni ko'plab qo'shish" });
+    impBtn.insertAdjacentHTML('beforeend', '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3"/><path d="M7 8l5-5 5 5"/><path d="M5 21h14"/></svg>');
+    impBtn.append(document.createTextNode('Import'));
+    filters.append(wrapStage, wrapPerson, wrapPlat, selAllBtn, expBtn, impBtn, el('button', 'lx-btn primary', '+ Yangi kontent', { type: 'button', 'data-act': 'toggle-content' }));
     list.classList.add('lx-contentcard');
     list.append(filters);
 
@@ -1476,8 +1479,8 @@
         });
         fseg.append(b);
       });
-      const COLS = ['Kontent nomi', 'Tayyorladi', 'Rubrika', 'Bosqich', 'Joylash vaqti', 'Platformalar', 'Material havolasi', 'Rekda', 'Target'];
-      const checks = mkChecks(COLS, COLS);
+      const COLS = ['Kontent nomi', 'Tayyorladi', 'Rubrika', 'Bosqich', 'Joylash vaqti', 'Platformalar', 'Material havolasi', 'Rekda', 'Target', 'Hook', 'Main Body', 'CTA', 'Reference'];
+      const checks = mkChecks(COLS, COLS.slice(0, 9));
       checks.style.flexWrap = 'wrap';
       checks.style.gap = '.25rem 1.1rem';
       fg.append(mkField('Qaysi kontentlar', wbox, 'lx-wide'), mkField('Format', fseg), mkField('Ustunlar', checks, 'lx-wide'));
@@ -1487,15 +1490,62 @@
       go.addEventListener('click', () => {
         const pick = sheet.querySelector('input[name="exp-which"]:checked');
         const v = pick ? pick.value : 'all';
-        const n = v === 'sel' ? nSel : v === 'shown' ? nShown : items.length;
         const ext = FMTS.find((f) => f[0] === fmt)[1];
-        hint.textContent = 'Namuna: fayl hali yuklanmaydi. Haqiqiy platformada «' + name + '-kontentlar.' + ext + '» (' + n + ' ta kontent) yuklab olinadi.';
+        const cols = [...checks.querySelectorAll('input[type=checkbox]')].filter((x) => x.checked).map((x) => x.getAttribute('data-val'));
+        if (!cols.length) { hint.classList.add('bad'); hint.textContent = 'Kamida bitta ustunni tanlang'; return; }
+        const ids = v === 'sel' ? items.filter((c) => selSet.has(c.id)).map((c) => c.id) : v === 'shown' ? shownIds.slice() : undefined;
+        go.disabled = true;
+        hint.classList.remove('bad');
+        hint.textContent = 'Tayyorlanmoqda…';
+        X5.download('POST', '/api/export/contents', { project: name, ids, columns: cols, format: ext }, name + '-kontentlar.' + ext)
+          .then(() => { closeSheet(); toast('Fayl yuklab olindi'); })
+          .catch((e) => { hint.classList.add('bad'); hint.textContent = e.message; go.disabled = false; });
       });
       act.append(hint, el('button', 'lx-btn', 'Bekor qilish', { type: 'button', 'data-act': 'cancel-export' }), go);
       sheet.append(fg, act);
       return sheet;
     };
     expBtn.addEventListener('click', () => openSheet(buildExportSheet()));
+    const buildImportSheet = () => {
+      const sheet = el('div', 'lx-sheet');
+      sheet.hidden = true;
+      sheet.append(el('h3', null, 'Kontentlarni fayldan yuklash'));
+      const info = el('p', 'lx-hint', 'Excel (.xlsx) yoki CSV fayl. Birinchi qator — sarlavha. «Kontent nomi» ustuni majburiy; qolgan ustunlar: Tayyorladi, Rubrika, Bosqich, Hook, Main Body, CTA, Reference, Material havolasi. Bir martada 500 tagacha qator.');
+      const tpl = el('div', 'lx-actions');
+      const a1 = el('button', 'lx-btn', 'Namuna (Excel)', { type: 'button' });
+      const a2 = el('button', 'lx-btn', 'Namuna (CSV)', { type: 'button' });
+      a1.addEventListener('click', () => X5.download('GET', '/api/export/template?format=xlsx', undefined, 'kontent-namuna.xlsx').catch((e) => toast(e.message)));
+      a2.addEventListener('click', () => X5.download('GET', '/api/export/template?format=csv', undefined, 'kontent-namuna.csv').catch((e) => toast(e.message)));
+      tpl.append(a1, a2);
+      const file = el('input', null, null, { type: 'file', accept: '.xlsx,.csv,.txt' });
+      const res = el('div', 'lx-hint');
+      const act = el('div', 'lx-actions');
+      const hint = el('span', 'lx-hint');
+      const go = el('button', 'lx-btn primary', 'Yuklash', { type: 'button' });
+      go.addEventListener('click', () => {
+        const f = file.files && file.files[0];
+        if (!f) { hint.classList.add('bad'); hint.textContent = 'Avval fayl tanlang'; return; }
+        if (f.size > 3 * 1024 * 1024) { hint.classList.add('bad'); hint.textContent = 'Fayl 3 MB dan oshmasligi kerak'; return; }
+        go.disabled = true;
+        hint.classList.remove('bad');
+        hint.textContent = 'Yuklanmoqda…';
+        res.textContent = '';
+        X5.readFile(f)
+          .then((data) => X5.api('POST', '/api/import/contents', { project: name, filename: f.name, data }))
+          .then((r) => X5.reload().then(() => {
+            hint.textContent = r.added + ' ta kontent qo\'shildi' + (r.failed.length ? ', ' + r.failed.length + ' ta qator o\'tmadi' : '');
+            res.textContent = r.failed.slice(0, 15).map((x) => x.row + '-qator: ' + x.error).join('\n') + (r.failed.length > 15 ? '\n…' : '');
+            res.style.whiteSpace = 'pre-wrap';
+            if (!r.failed.length) { closeSheet(); toast(r.added + ' ta kontent qo\'shildi'); }
+          }))
+          .catch((e) => { hint.classList.add('bad'); hint.textContent = e.message; })
+          .then(() => { go.disabled = false; });
+      });
+      act.append(hint, el('button', 'lx-btn', 'Yopish', { type: 'button', 'data-act': 'cancel-import' }), go);
+      sheet.append(info, tpl, file, res, act);
+      return sheet;
+    };
+    impBtn.addEventListener('click', () => openSheet(buildImportSheet()));
     selAllBtn.addEventListener('click', () => {
       const all = shownIds.length > 0 && shownIds.every((id) => selSet.has(id));
       shownIds.forEach((id) => { if (all) selSet.delete(id); else selSet.add(id); });

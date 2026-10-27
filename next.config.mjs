@@ -1,5 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  serverExternalPackages: ['pdfkit', 'postgres'],
+  outputFileTracingIncludes: { '/api/**': ['./assets/fonts/**'] },
   env: { NEXT_PUBLIC_BUILD_ID: (process.env.VERCEL_GIT_COMMIT_SHA || String(Date.now())).slice(0, 8) },
   poweredByHeader: false,
   async headers() {

@@ -22,6 +22,42 @@
     });
   };
 
+  // Fayl yuklab olish (POST yoki GET): serverdan kelgan faylni brauzerga saqlaydi
+  X5.download = function (method, url, body, fallbackName) {
+    return fetch(url, {
+      method: method,
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json', 'X-X5': '1' },
+      body: body === undefined ? undefined : JSON.stringify(body)
+    }).then(function (res) {
+      if (!res.ok) {
+        return res.json().catch(function () { return null; }).then(function (d) { throw new Error((d && d.error) || 'Faylni yuklab bo\'lmadi'); });
+      }
+      var cd = res.headers.get('Content-Disposition') || '';
+      var m = /filename\*=UTF-8''([^;]+)/.exec(cd) || /filename="?([^";]+)"?/.exec(cd);
+      var name = m ? decodeURIComponent(m[1]) : fallbackName;
+      return res.blob().then(function (blob) {
+        var a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = name;
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+        return name;
+      });
+    });
+  };
+
+  // Faylni base64 ga o'girib yuborish uchun
+  X5.readFile = function (file) {
+    return new Promise(function (resolve, reject) {
+      var fr = new FileReader();
+      fr.onload = function () { resolve(String(fr.result).split(',')[1] || ''); };
+      fr.onerror = function () { reject(new Error('Faylni o\'qib bo\'lmadi')); };
+      fr.readAsDataURL(file);
+    });
+  };
+
   X5.reload = function () {
     return X5.api('GET', '/api/data').then(function (d) {
       window.X5app.clearOverrides();
