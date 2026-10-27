@@ -1,4 +1,6 @@
 import { NextResponse, after } from 'next/server';
+
+export const maxDuration = 60;
 import { handleUpdate } from '@/lib/bot';
 import { flushOutbox } from '@/lib/outbox';
 import { botEnabled } from '@/lib/telegram';
