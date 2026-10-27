@@ -16,5 +16,5 @@ http.createServer(async (req, res) => {
   else body = { _multipart: true, bytes: raw.length, head: raw.toString('utf8', 0, 400) };
   log.push({ method: m[1], body });
   res.setHeader('content-type', 'application/json');
-  res.end(JSON.stringify({ ok: true, result: { message_id: log.length } }));
+  res.end(JSON.stringify({ ok: true, result: m[1] === 'getChatMemberCount' ? 1234 : { message_id: log.length } }));
 }).listen(port, '127.0.0.1', () => console.log('fake telegram on', port));

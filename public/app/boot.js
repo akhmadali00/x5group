@@ -63,6 +63,7 @@
       window.X5app.clearOverrides();
       window.X5app.setMe(d.me.name);
       window.X5app.setArchived(d.archived || {});
+      window.X5app.setSync(d.syncAt || '');
       window.dash.setData(d.datasets);
     });
   };

@@ -26,6 +26,17 @@ Bot allaqachon bor: `@x5group_ai_bot`. Tokenni @BotFather'dan oling (`/mybots` �
 | `CRON_SECRET` | yana bitta uzun tasodifiy matn (yuqoridagidan boshqacha) |
 | `BACKUP_KEY` | ixtiyoriy, kamida 16 belgi: zaxira faylidagi parollarni shifrlaydi (yo'qotib qo'ymang!) |
 
+Ixtiyoriy qo'shimcha o'zgaruvchilar (keyinroq ham qo'shsangiz bo'ladi; qo'shgandan keyin Vercel'da **Redeploy** qiling):
+
+| Nomi | Nima uchun |
+|---|---|
+| `ANTHROPIC_API_KEY` | botdagi AI yordamchi (oddiy matn yozsangiz, savolga javob beradi va vazifa/syomka qo'shadi; har kim faqat o'z ruxsati doirasida). `AI_MODEL` bilan modelni almashtirish mumkin |
+| `META_ACCESS_TOKEN` | Meta reklama (Facebook/Instagram) kampaniyalari va kunlik natijalar avtomatik yangilanadi. Loyihaning **Reklama akkaunt** maydoniga `act_123...` yoki shunchaki raqamni kiriting. Token «ads_read» ruxsatli System User tokeni bo'lsin |
+| `META_IG_USER_ID` | Instagram obunachilar sonini avtomatik olish uchun (o'zingizning Instagram Business akkaunt ID'ingiz; boshqa akkauntlarning ochiq obunachi sonini shu orqali o'qiydi) |
+| `YOUTUBE_API_KEY` | YouTube kanal obunachilari sonini avtomatik olish uchun |
+
+Telegram kanal obunachilari uchun qo'shimcha kalit kerak emas: kanal havolasi ochiq (`t.me/nom`) bo'lsa, bot soni o'zi o'qiydi.
+
 3. **Deploy** ni bosing. Tugagach sayt manzili chiqadi (masalan `x5group.vercel.app`).
 
 ## 4. Birinchi kirish
@@ -46,6 +57,13 @@ Bot allaqachon bor: `@x5group_ai_bot`. Tokenni @BotFather'dan oling (`/mybots` �
 3. Tekshirish: **Arxiv → Bot** da «Yuborilmagan xabarlar navbati» 0 bo'lishi kerak.
 
 Qo'shimcha: `vercel.json` da kuniga bir marta ishlaydigan zaxira chaqiruv bor (Vercel bepul tarifi shuni beradi). Asosiy har daqiqalik chaqiruvni Supabase qiladi.
+
+## 6.1. Avtomatik yangilanishlar
+
+- Har 3 soatda reklama (Meta) va obunachilar soni yangilanadi; Admin botda `/yangila` yozsa darhol yangilanadi.
+- Reklama signallari: natijasiz kampaniya, o'rtachadan 1.5× qimmat CPR va o'rtachadan ancha arzon (byudjetni oshirish mumkin) kampaniyalar haqida PM va Adminga haftada bir marta xabar keladi.
+- Oylik PDF hisobot har oyning 1-kuni ertalab Adminga Telegramda keladi; istalgan oyni `/hisobot 2026-10` deb so'rash mumkin.
+- Telefonga o'rnatish: sayt manzilini telefonda oching → brauzer menyusidan **«Bosh ekranga qo'shish»**. Bot ichida ham **Platforma** tugmasi paydo bo'ladi (Webhookni o'rnatganingizdan keyin).
 
 ## 7. Xavfsizlik
 

@@ -711,6 +711,7 @@
   const targetState = { proj: null };
   const tabBar = document.querySelector('.lx-ttabs');
   const tSum = document.querySelector('.lx-tsum');
+  let syncAt = '';
   const tSync = document.getElementById('target-sync');
   const belongs = (k, loyiha) => String(loyiha).toLowerCase().startsWith(String(k.mijoz).toLowerCase());
   const mkt = (key, field) => ({ 'data-source': 'campaign_totals', 'data-field': field, 'data-where': 'mijoz=' + enc(key) });
@@ -761,7 +762,7 @@
     metric("Jami ko'rishlar", compact(tot.korish), 'korish');
     metric("Qo'shilgan obunachilar", fmtInt(tot.obunachi), 'obunachi');
     metric('Kampaniyalar', fmtInt(tot.soni), 'soni', tot.faol + ' tasi faol');
-    tSync.textContent = "Oxirgi yangilanish: bugun 12:00 · Meta";
+    tSync.textContent = syncAt ? 'Oxirgi yangilanish: ' + syncAt + ' · Meta' : '';
     if (!mine.length) {
       targetBox.append(el('div', 'lx-empty', "Bu loyiha uchun yoqilgan target yo'q."));
       return;
@@ -3020,6 +3021,7 @@
       taskNotes.clear();
       teamAdded.length = 0;
     },
+    setSync: (t) => { syncAt = t || ''; },
     setArchived: (o) => { archived.clear(); Object.keys(o || {}).forEach((k) => archived.set(k, o[k])); },
     showPage,
     firstPage,

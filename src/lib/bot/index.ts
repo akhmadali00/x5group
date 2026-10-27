@@ -5,6 +5,8 @@ import { audit } from '../audit';
 import { enqueue, adminChats } from '../outbox';
 import { answerCallback, editMessage, esc, sendDocument, sendMessage, type Keyboard } from '../telegram';
 import { monthlyReportPdf } from '../monthlyReport';
+import { syncAll } from '../social';
+import { addDays } from '../services/common';
 import { loadMe } from '../session';
 import { updateTask } from '../services/tasks';
 import { updateContent } from '../services/contents';
@@ -72,10 +74,20 @@ async function onMessage(sql: Sql, m: R) {
   if (member.telegram_status === 'blocked') return;
 
   if (cmd === '/start' || cmd === '/yordam' || cmd === '/help') {
-    await sendMessage(chat, `Salom, ${esc(member.name)}!\n\n${HELP}${member.role === 'admin' ? '\n/sorovlar — kutilayotgan ulanish so\'rovlari\n/hisobot — oylik PDF hisobot (masalan: /hisobot 2026-10)' : ''}`);
+    await sendMessage(chat, `Salom, ${esc(member.name)}!\n\n${HELP}${member.role === 'admin' ? '\n/sorovlar — kutilayotgan ulanish so\'rovlari\n/hisobot — oylik PDF hisobot (masalan: /hisobot 2026-10)\n/yangila — reklama va obunachilarni hozir yangilash' : ''}`);
     return;
   }
   if (cmd === '/sorovlar' && member.role === 'admin') return listRequests(sql, chat);
+  if (cmd === '/yangila' && member.role === 'admin') {
+    await sendMessage(chat, 'Reklama va obunachilar yangilanmoqda…');
+    try {
+      const t = localParts();
+      const st = await syncAll(sql, addDays(t.date, -((t.dow + 6) % 7)));
+      const errs = [...(st.meta?.errors || []), ...(st.followers?.errors || [])];
+      await sendMessage(chat, `✅ Yangilandi.\nReklama: ${st.meta ? `${st.meta.accounts} akkaunt, ${st.meta.campaigns} kampaniya` : 'Meta ulanmagan'}\nObunachi o'zgargan: ${st.followers?.updated ?? 0} ta` + (errs.length ? '\n\n⚠️ ' + errs.slice(0, 5).map(esc).join('\n') : ''));
+    } catch (e) { console.error('[x5] yangila', e); await sendMessage(chat, 'Yangilab bo\'lmadi. Keyinroq urinib ko\'ring.'); }
+    return;
+  }
   if (cmd === '/hisobot' && member.role === 'admin') {
     const m = /^\d{4}-(0[1-9]|1[0-2])$/.test(rest[0] || '') ? rest[0] : prevMonth();
     try {

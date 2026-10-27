@@ -36,14 +36,16 @@ export async function flushOutbox(limit = 40): Promise<number> {
     const rows = await sql<{ id: string; chat_id: string; text: string; buttons: Keyboard | null }[]>`
       select id, chat_id, text, buttons from outbox where sent_at is null and attempts < 5 order by id limit ${limit}`;
     for (const r of rows) {
+      // Qatorni avval "band qilamiz" (atomik): bir vaqtda ishlayotgan boshqa nusxa bir xabarni ikki marta yubormaydi
+      const claimed = await sql`update outbox set sent_at = now() where id = ${r.id} and sent_at is null returning id`;
+      if (!claimed.length) continue;
       try {
         await sendMessage(r.chat_id, r.text, r.buttons);
-        await sql`update outbox set sent_at = now() where id = ${r.id}`;
         sent++;
       } catch (e) {
         const code = e instanceof TgError ? e.code : 0;
         // 403: foydalanuvchi botni to'xtatgan; qayta urinishning ma'nosi yo'q
-        await sql`update outbox set attempts = ${code === 403 ? 5 : sql`attempts + 1`}, last_error = ${String((e as Error).message).slice(0, 300)} where id = ${r.id}`;
+        await sql`update outbox set sent_at = null, attempts = ${code === 403 ? 5 : sql`attempts + 1`}, last_error = ${String((e as Error).message).slice(0, 300)} where id = ${r.id}`;
         if (code === 429) break;
       }
     }

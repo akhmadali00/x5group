@@ -3,6 +3,7 @@ import { db, type Sql } from './db';
 import { enqueue, enqueueToAdmins, flushOutbox } from './outbox';
 import { botEnabled, esc, sendDocument, type Keyboard } from './telegram';
 import { monthlyReportPdf } from './monthlyReport';
+import { syncAll } from './social';
 import { addDays } from './services/common';
 import { dailyBackup } from './backup';
 
@@ -176,6 +177,18 @@ async function reports(sql: Sql, t: Local) {
   }
 }
 
+/** Tashqi ma'lumotlar (Meta reklama, obunachilar): har 3 soatda bir marta. */
+async function syncExternal(sql: Sql, t: Local) {
+  if (t.minutes % 60 < 7) return;
+  const slot = Math.floor(t.minutes / 60 / 3);
+  const ins = await sql`insert into reminder_log (kind, ref, chat_id) values ('sync', ${`${t.date}:${slot}`}, 0) on conflict do nothing returning kind`;
+  if (!ins.length) return;
+  const week = addDays(t.date, -((t.dow + 6) % 7)); // dushanba sanasi = hafta kaliti
+  const st = await syncAll(sql, week);
+  const errs = [...(st.meta?.errors || []), ...(st.followers?.errors || [])];
+  if (errs.length) console.error('[x5] sync xatolari:', errs.join(' | '));
+}
+
 export async function runTick(now = new Date()) {
   if (!botEnabled()) return { sent: 0, skipped: 'bot sozlanmagan' };
   const sql = db();
@@ -186,7 +199,8 @@ export async function runTick(now = new Date()) {
     ['morning', () => morning(sql, t)],
     ['posts', () => postReminders(sql, t)],
     ['reports', () => reports(sql, t)],
-    ['backup', () => dailyBackup(sql, t)]
+    ['backup', () => dailyBackup(sql, t)],
+    ['sync', () => syncExternal(sql, t)]
   ] as [string, () => Promise<void>][]) {
     try { await fn(); } catch (e) { errors.push(`${name}: ${(e as Error).message}`); console.error('[x5] tick', name, e); }
   }

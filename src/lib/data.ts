@@ -42,7 +42,7 @@ export type Datasets = {
   backups: R[];
 };
 
-export type Loaded = { datasets: Datasets; archived: Record<string, string> };
+export type Loaded = { datasets: Datasets; archived: Record<string, string>; syncAt: string };
 
 export async function loadDatasets(me: Me): Promise<Loaded> {
   const sql = db();
@@ -262,6 +262,7 @@ export async function loadDatasets(me: Me): Promise<Loaded> {
         .map((d) => ({ id: `${d.project_id}-${d.day}`, mijoz: pName.get(d.project_id) || '', sana: d.day, lid: d.leads, sarf: d.spend, toliq: b01(d.complete) }))
     : [];
 
+  const [syncRow] = await sql<{ value: { at?: string } }[]>`select value from settings where key = 'sync.last'`;
   return {
     datasets: {
       team,
@@ -277,6 +278,7 @@ export async function loadDatasets(me: Me): Promise<Loaded> {
       backups: backupRows.map((b) => ({ id: String(b.id), vaqt: archivedLabel(b.created_at), tur: b.kind, hajm: Object.values(b.row_counts as Record<string, number>).reduce((a, x) => a + x, 0) })),
       audit: auditRows.map((a) => ({ id: String(a.id), kim: a.actor_name || 'Tizim', amal: a.action, tur: a.entity, mazmun: a.summary, vaqt: archivedLabel(a.at), qaytarilgan: b01(a.reverted_at), qaytarsa: b01(a.can_revert) }))
     },
-    archived: admin ? archived : {}
+    archived: admin ? archived : {},
+    syncAt: syncRow?.value?.at ? archivedLabel(syncRow.value.at) : ''
   };
 }

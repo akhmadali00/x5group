@@ -7,8 +7,8 @@ export const dynamic = 'force-dynamic';
 export async function GET() {
   try {
     const s = await requireMe();
-    const { datasets, archived } = await loadDatasets(s.me);
-    return ok({ datasets, archived, me: { name: s.me.name, id: s.me.id } });
+    const { datasets, archived, syncAt } = await loadDatasets(s.me);
+    return ok({ datasets, archived, syncAt, me: { name: s.me.name, id: s.me.id } });
   } catch (e) {
     return fail(e);
   }
