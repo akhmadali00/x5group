@@ -1,4 +1,5 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, after } from 'next/server';
+import { flushOutbox } from './outbox';
 import { ZodError } from 'zod';
 
 export class HttpError extends Error {
@@ -35,6 +36,8 @@ export function fail(e: unknown) {
 export function csrfGuard(req: Request) {
   const method = req.method.toUpperCase();
   if (method === 'GET' || method === 'HEAD' || method === 'OPTIONS') return;
+  // javob yuborilgach, o'zgarish bilan birga navbatga tushgan Telegram xabarlari jo'natiladi
+  try { after(() => flushOutbox().catch(() => {})); } catch { /* so'rov doirasidan tashqarida */ }
   if (req.headers.get('x-x5') !== '1') throw forbidden('Noto\'g\'ri so\'rov manbai');
   const origin = req.headers.get('origin');
   if (origin) {

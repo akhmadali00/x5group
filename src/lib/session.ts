@@ -92,3 +92,20 @@ export async function requireAdmin(): Promise<SessionInfo> {
   if (s.me.role !== 'admin') throw forbidden('Faqat Admin uchun');
   return s;
 }
+
+/** Bot uchun: a'zo ID bo'yicha Me (veb-sessiyasiz). Faqat akkauntli, faol a'zolar. */
+export async function loadMe(memberId: string): Promise<Me | null> {
+  const sql = db();
+  const [r] = await sql<Omit<Row, 'token_hash' | 'mfa_ok' | 'totp_enabled'>[]>`
+    select id, name, email, role, position, permissions, telegram_chat_id from members where id = ${memberId} and active and kind = 'account'`;
+  if (!r) return null;
+  const proj = await sql<{ project_id: string }[]>`
+    select project_id from member_projects where member_id = ${r.id}
+    union select project_id from project_pms where member_id = ${r.id}`;
+  return {
+    id: r.id, name: r.name, role: r.role, position: r.position,
+    permissions: new Set(r.permissions || []),
+    projectIds: new Set(proj.map((p) => p.project_id)),
+    telegramChatId: r.telegram_chat_id ? Number(r.telegram_chat_id) : null
+  };
+}

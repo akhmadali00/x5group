@@ -1748,8 +1748,26 @@
       });
       sheet.append(seg);
     }
+    // Telegramni ulash: bir martalik havola (24 soat)
+    const fTgBot = el('div', 'lx-field lx-wide');
+    if (m && m.id && mode !== 'new') {
+      const st = String(m.tg_holat || 'none');
+      const stText = el('span', 'lx-hint2', st === 'approved' ? 'Telegram ulangan ✓' : st === 'pending' ? 'Tasdiq kutilmoqda' : 'Telegram ulanmagan');
+      const linkBtn = el('button', 'lx-btn', st === 'approved' ? 'Qayta ulash' : 'Telegramni ulash', { type: 'button' });
+      const linkOut = el('div', 'lx-hint2');
+      linkBtn.addEventListener('click', () => {
+        linkBtn.disabled = true;
+        X5.api('POST', '/api/telegram/link', { memberId: m.id }).then((r) => {
+          linkOut.replaceChildren(document.createTextNode("Havolani shu odam Telegramda ochishi kerak (24 soat amal qiladi): "));
+          const a = el('a', null, r.url, { href: r.url, target: '_blank', rel: 'noopener noreferrer' });
+          linkOut.append(a);
+        }).catch((e) => { linkOut.textContent = e.message; }).then(() => { linkBtn.disabled = false; });
+      });
+      fTgBot.append(el('label', null, 'Telegram bot'), stText, linkBtn, linkOut);
+    }
+    if (!fTgBot.childNodes.length) fTgBot.hidden = true;
     const fg = el('div', 'lx-fgrid');
-    fg.append(fName, fEmail, fPass, fKasb, fPhone, fTg, fRang, fLav, fRol, fProj, fPerm, fCur, fNew);
+    fg.append(fName, fEmail, fPass, fKasb, fPhone, fTg, fRang, fLav, fRol, fProj, fPerm, fCur, fNew, fTgBot);
     sheet.append(fg);
     if (mode === 'self') sheet.append(el('p', 'lx-lock', "Boshqa ma'lumotlarni (lavozim, rol, ruxsatlar) faqat Admin o'zgartiradi."));
     sheet.append(sheetActions('cancel-member', mode === 'new' ? "Qo'shish" : 'Saqlash', 'save'));
@@ -2287,16 +2305,16 @@
     }
   ];
   const drawArxiv = () => {
-    const items = ARXIV.map((sec) => {
+    const items = ARXIV.concat([{ id: 'tarix', label: 'Tarix', src: 'audit', custom: true }, { id: 'zaxira', label: 'Zaxira', src: 'backups', custom: true }]).map((sec) => {
       const d = dash.data(sec.src);
-      const rows = d.status === 'ok' ? d.data.filter((x) => archived.has(sec.prefix + x.id)) : [];
+      const rows = d.status === 'ok' ? (sec.custom ? d.data : d.data.filter((x) => archived.has(sec.prefix + x.id))) : [];
       return { sec, d, rows };
     });
     if (!items.some((i) => i.sec.id === arxivState.tab)) arxivState.tab = items[0].sec.id;
     arxivTabs.replaceChildren();
     items.forEach(({ sec, rows }) => {
       const b = el('button', null, sec.label, { type: 'button', role: 'tab', 'data-atab': sec.id, 'aria-selected': String(sec.id === arxivState.tab) });
-      b.append(el('span', 'lx-acnt', String(rows.length)));
+      if (!sec.custom) b.append(el('span', 'lx-acnt', String(rows.length)));
       arxivTabs.append(b);
     });
     arxivBox.replaceChildren();
@@ -2304,6 +2322,83 @@
     const { sec, d, rows } = cur;
     if (d.status === 'loading') { skeleton(arxivBox); return; }
     if (d.status !== 'ok') { arxivBox.append(el('div', 'lx-fail', 'Failed to load')); return; }
+    if (sec.id === 'zaxira') {
+      arxivBox.append(el('h2', null, 'Zaxira nusxalar'));
+      arxivBox.append(el('p', 'lx-hint2', "Har kuni ertalab avtomatik zaxira olinadi va Adminga Telegramda fayl sifatida yuboriladi. Oxirgi 30 kun saqlanadi. Tiklashdan oldin joriy holatning zaxirasi avtomatik olinadi."));
+      const bar2 = el('div', 'lx-actions');
+      const hint2 = el('span', 'lx-hint');
+      const mkNow = el('button', 'lx-btn primary', 'Hozir zaxira olish', { type: 'button' });
+      mkNow.addEventListener('click', () => { mkNow.disabled = true; X5.mutate('POST', '/api/backups', undefined, 'Zaxira olindi').catch(() => {}).then(() => { mkNow.disabled = false; }); });
+      const fileIn = el('input', null, null, { type: 'file', accept: '.json,application/json', hidden: '' });
+      const upBtn = el('button', 'lx-btn', 'Fayldan tiklash', { type: 'button' });
+      upBtn.addEventListener('click', () => {
+        if (!upBtn.hasAttribute('data-armed')) {
+          upBtn.setAttribute('data-armed', '1');
+          upBtn.textContent = "Tasdiqlang: hamma ma'lumot almashadi";
+          hint2.textContent = 'Keyin faylni tanlang.';
+          setTimeout(() => { upBtn.removeAttribute('data-armed'); upBtn.textContent = 'Fayldan tiklash'; hint2.textContent = ''; }, 6000);
+          return;
+        }
+        upBtn.removeAttribute('data-armed');
+        fileIn.click();
+      });
+      fileIn.addEventListener('change', () => {
+        const f = fileIn.files && fileIn.files[0];
+        if (!f) return;
+        f.text().then((txt) => X5.mutate('POST', '/api/backups/restore', { file: txt }, 'Ma\'lumotlar tiklandi')).catch((e) => { hint2.classList.add('bad'); hint2.textContent = e.message; });
+      });
+      bar2.append(hint2, upBtn, fileIn, mkNow);
+      arxivBox.append(bar2);
+      if (!rows.length) { arxivBox.append(el('div', 'lx-empty', "Hozircha zaxira yo'q.")); return; }
+      const bl = el('div', 'lx-list');
+      const bh = el('div', 'lx-ahead');
+      const bgrid = 'minmax(8rem,1.2fr) minmax(5rem,0.8fr) minmax(5rem,0.8fr) 15rem';
+      bh.style.gridTemplateColumns = bgrid;
+      ['Qachon', 'Turi', 'Yozuvlar'].forEach((t) => bh.append(el('div', null, t)));
+      bh.append(el('div'));
+      bl.append(bh);
+      const KIND = { daily: 'Kunlik', manual: "Qo'lda", 'pre-restore': 'Tiklashdan oldin' };
+      rows.forEach((x) => {
+        const row = el('div', 'lx-arow');
+        row.style.gridTemplateColumns = bgrid;
+        [[x.vaqt, 'Qachon'], [KIND[x.tur] || x.tur, 'Turi'], [String(x.hajm), 'Yozuvlar']].forEach(([t, l]) => row.append(el('div', 'lx-c', t, { 'data-label': l })));
+        const rc = el('div', 'lx-c lx-arest');
+        rc.append(el('a', 'lx-btn', 'Yuklab olish', { href: '/api/backups/' + x.id, download: '' }), el('button', 'lx-btn', 'Tiklash', { type: 'button', 'data-restore-backup': x.id }));
+        row.append(rc);
+        bl.append(row);
+      });
+      arxivBox.append(bl);
+      return;
+    }
+    if (sec.custom) {
+      arxivBox.append(el('h2', null, "O'zgarishlar tarixi"));
+      if (!rows.length) {
+        const eb = el('div', 'lx-emptybox');
+        eb.append(el('div', 'lx-empty', "Hozircha o'zgarish yo'q."), el('div', 'lx-awhen', "Platformadagi har bir o'zgarish shu yerda ko'rinadi va kerak bo'lsa qaytariladi."));
+        arxivBox.append(eb);
+        return;
+      }
+      const tl = el('div', 'lx-list');
+      const th = el('div', 'lx-ahead');
+      const grid = 'minmax(7rem,0.9fr) minmax(6rem,0.8fr) minmax(5.5rem,0.6fr) minmax(12rem,3fr) 7.5rem';
+      th.style.gridTemplateColumns = grid;
+      ['Qachon', 'Kim', 'Amal', "O'zgarish"].forEach((t) => th.append(el('div', null, t)));
+      th.append(el('div'));
+      tl.append(th);
+      const ACT = { create: "Qo'shildi", update: "O'zgardi", delete: 'Arxivga', restore: 'Qaytarildi', revert: 'Bekor qilindi', login: 'Kirish', system: 'Tizim' };
+      rows.forEach((x) => {
+        const row = el('div', 'lx-arow');
+        row.style.gridTemplateColumns = grid;
+        [[x.vaqt, 'Qachon'], [x.kim, 'Kim'], [ACT[x.amal] || x.amal, 'Amal'], [x.mazmun, "O'zgarish"]].forEach(([t, l]) => row.append(el('div', 'lx-c', t, { 'data-label': l })));
+        const rc = el('div', 'lx-c lx-arest');
+        if (Number(x.qaytarsa)) rc.append(el('button', 'lx-btn', 'Qaytarish', { type: 'button', 'data-revert': x.id }));
+        else if (Number(x.qaytarilgan)) rc.append(el('span', 'lx-awhen', 'Qaytarilgan'));
+        row.append(rc);
+        tl.append(row);
+      });
+      arxivBox.append(tl);
+      return;
+    }
     arxivBox.append(el('h2', null, 'Arxivlangan ' + sec.label.toLowerCase()));
     if (!rows.length) {
       const eb = el('div', 'lx-emptybox');
@@ -2576,6 +2671,30 @@
     const fl = e.target.closest('[data-flag]');
     if (fl) {
       flagClick(fl);
+      return;
+    }
+    const rb = e.target.closest('[data-restore-backup]');
+    if (rb) {
+      if (!rb.hasAttribute('data-armed')) {
+        rb.setAttribute('data-armed', '1');
+        rb.textContent = 'Tasdiqlang';
+        setTimeout(() => { if (rb.isConnected) { rb.removeAttribute('data-armed'); rb.textContent = 'Tiklash'; } }, 5000);
+        return;
+      }
+      rb.disabled = true;
+      X5.mutate('POST', '/api/backups/' + rb.getAttribute('data-restore-backup'), undefined, "Ma'lumotlar tiklandi").catch(() => { rb.disabled = false; });
+      return;
+    }
+    const rv = e.target.closest('[data-revert]');
+    if (rv) {
+      if (!rv.hasAttribute('data-armed')) {
+        rv.setAttribute('data-armed', '1');
+        rv.textContent = 'Tasdiqlang';
+        setTimeout(() => { if (rv.isConnected) { rv.removeAttribute('data-armed'); rv.textContent = 'Qaytarish'; } }, 4000);
+        return;
+      }
+      rv.disabled = true;
+      X5.mutate('POST', '/api/audit/' + rv.getAttribute('data-revert'), undefined, "O'zgarish qaytarildi").catch(() => { rv.disabled = false; });
       return;
     }
     const rs = e.target.closest('[data-restore]');

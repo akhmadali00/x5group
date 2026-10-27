@@ -1,0 +1,31 @@
+const BASE = 'http://localhost:3100'; const jars = {}; const results = [];
+const check = (n, c, x) => results.push([c ? 'OK  ' : 'FAIL', n, c ? '' : JSON.stringify(x)?.slice(0, 500)]);
+async function call(method, path, body, raw = false) {
+  const r = await fetch(BASE + path, { method, headers: { 'content-type': 'application/json', 'x-x5': '1', origin: BASE, cookie: jars.a || '' }, body: body ? JSON.stringify(body) : undefined });
+  const sc = r.headers.getSetCookie?.() || []; if (sc.length) jars.a = sc.map((c) => c.split(';')[0]).join('; ');
+  if (raw) return { status: r.status, text: await r.text() };
+  let j = null; try { j = await r.json(); } catch {} return { status: r.status, j };
+}
+let r = await call('POST', '/api/auth/setup', { name: 'Sensei', email: 's@x5.uz', password: 'parol12345' }); check('setup', r.status === 200, r);
+await call('POST', '/api/members', { kind: 'account', name: 'Ali', email: 'ali@x5.uz', password: 'parol12345', position: 'Kontent Maker', role: 'member', permissions: ['bosh'], projects: [] });
+await call('POST', '/api/projects', { name: 'Loyiha A', pms: ['Sensei'] });
+await call('POST', '/api/tasks', { assignee: 'Ali', title: 'Vazifa 1', durationDays: 2 });
+r = await call('POST', '/api/backups'); check('manual backup', r.status === 200 && r.j.id, r); const bid = r.j.id;
+await call('POST', '/api/tasks', { assignee: 'Ali', title: 'Vazifa 2 (zaxiradan keyin)', durationDays: 2 });
+await call('POST', '/api/projects', { name: 'Loyiha B' });
+let d = (await call('GET', '/api/data')).j; check('before restore 2 tasks, 2 projects', d.datasets.tasks.length === 2 && d.datasets.projects.length === 2, d.datasets.tasks.length);
+check('backup listed', d.datasets.backups.length >= 1, d.datasets.backups);
+r = await call('GET', `/api/backups/${bid}`, null, true); check('download file', r.status === 200 && JSON.parse(r.text).app === 'x5group' && !JSON.parse(r.text).data.members[0].password_hash, r.text.slice(0, 200)); const file = r.text;
+r = await call('POST', `/api/backups/${bid}`); check('restore from id', r.status === 200, r);
+r = await call('GET', '/api/data'); check('session closed after restore', r.status === 401, r);
+r = await call('POST', '/api/auth/login', { email: 's@x5.uz', password: 'parol12345' }); check('login works after restore (hash kept)', r.status === 200, r);
+d = (await call('GET', '/api/data')).j; check('restored: 1 task, 1 project', d.datasets.tasks.length === 1 && d.datasets.projects.length === 1, { t: d.datasets.tasks.length, p: d.datasets.projects.length });
+check('pre-restore backup exists', d.datasets.backups.some((b) => b.tur === 'pre-restore'), d.datasets.backups);
+await call('POST', '/api/tasks', { assignee: 'Ali', title: 'Vazifa 3', durationDays: 1 });
+r = await call('POST', '/api/backups/restore', { file }); check('restore from file', r.status === 200, r);
+r = await call('POST', '/api/auth/login', { email: 's@x5.uz', password: 'parol12345' }); check('login after file restore', r.status === 200, r);
+d = (await call('GET', '/api/data')).j; check('file restore: 1 task', d.datasets.tasks.length === 1 && d.datasets.tasks[0].vazifa === 'Vazifa 1', d.datasets.tasks);
+r = await call('POST', '/api/backups/restore', { file: '{"app":"x"}' }); check('bad file refused', r.status === 400, r);
+r = await call('POST', '/api/tasks', { assignee: 'Ali', title: 'Yangi', durationDays: 1 }); check('writes work after restore', r.status === 200, r);
+for (const x of results) console.log(...x);
+process.exit(results.some((x) => x[0] === 'FAIL') ? 1 : 0);

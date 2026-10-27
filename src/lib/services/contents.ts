@@ -3,10 +3,12 @@ import { db } from '../db';
 import { audit } from '../audit';
 import { bad, forbidden, notFound } from '../http';
 import { canProject, isAdmin, stageLocked, type Me } from '../perm';
+import { notifyAuthor, requestApproval } from '../notify';
 import { memberIdByName, projectByName, snapshot, zDate, zStr } from './common';
 
 export const STAGES = ["G'oya", 'Ijobiy', 'Skript Tayyor', 'Syomka Qilindi', 'TZ Berildi', 'Montaj Tayyor', 'Tasdiqlandi', 'Post Joylandi'] as const;
 const POST_OPEN = ['Tasdiqlandi', 'Post Joylandi'];
+const STAGE_APPROVAL = new Set(["G'oya", 'Montaj Tayyor']);
 const PLATFORMS = ['instagram', 'telegram', 'youtube'] as const;
 const Plat = z.array(z.enum(PLATFORMS)).transform((a) => [...new Set(a)]);
 const Time = z.string().trim().regex(/^\d{2}:\d{2}$/, "Vaqt noto'g'ri").nullish().or(z.literal('')).transform((v) => (v ? v : null));
@@ -63,6 +65,7 @@ export async function createContent(me: Me, input: unknown) {
         ${b.linkInstagram ?? null}, ${b.linkTelegram ?? null}, ${b.linkYoutube ?? null}, ${b.noteInstagram ?? null}, ${b.noteTelegram ?? null}, ${b.noteYoutube ?? null})
       returning *`;
     await audit(tx as never, { actor: me, action: 'create', entity: 'content', entityId: row.id, summary: `Yangi kontent: ${p.name} — «${b.title}»`, after: snapshot(row) });
+    if (!isAdmin(me) && me.position !== 'PM') await requestApproval(tx as never, row, me.id);
     return row.id as string;
   });
   return { id };
@@ -76,7 +79,7 @@ export async function updateContent(me: Me, id: string, input: unknown) {
     if (!before) throw notFound('Kontent topilmadi');
     if (!canProject(me, before.project_id)) throw forbidden('Bu loyiha kontentini tahrirlay olmaysiz');
 
-    const stage: string = b.stage ?? before.stage;
+    let stage: string = b.stage ?? before.stage;
     if (b.stage && b.stage !== before.stage) {
       if (stageLocked(me, b.stage)) throw forbidden('Bu bosqichni faqat Admin yoki PM belgilaydi');
       if (!isAdmin(me) && POST_OPEN.includes(before.stage)) throw forbidden("Tasdiqlangan kontent bosqichini faqat Admin o'zgartiradi");
@@ -84,6 +87,15 @@ export async function updateContent(me: Me, id: string, input: unknown) {
     if (b.target !== undefined && b.target !== before.target && !isAdmin(me)) throw forbidden("Targetga yuborishni faqat Admin o'zgartiradi");
     const touchesPost = POST_KEYS.some((k) => b[k as keyof typeof b] !== undefined);
     if (touchesPost && !POST_OPEN.includes(stage)) throw bad('Joylash faqat «Tasdiqlandi» bosqichida ochiladi');
+
+    // Barcha tanlangan platformalarda joylangan bo'lsa bosqich avtomatik «Post Joylandi» ga o'tadi (va teskarisi)
+    const platsNow: string[] = b.platforms ?? before.platforms;
+    const postedNow: string[] = b.postedOn ?? before.posted_on;
+    if (b.postedOn !== undefined || b.platforms !== undefined) {
+      const all = platsNow.length > 0 && platsNow.every((x) => postedNow.includes(x));
+      if (all && stage === 'Tasdiqlandi') stage = 'Post Joylandi';
+      else if (!all && stage === 'Post Joylandi' && b.stage === undefined) stage = 'Tasdiqlandi';
+    }
 
     const author = b.author !== undefined ? (b.author ? await memberIdByName(tx as never, b.author) : null) : before.author_id;
     const editor = b.editor !== undefined ? await memberIdByName(tx as never, b.editor) : before.editor_id;
@@ -102,6 +114,10 @@ export async function updateContent(me: Me, id: string, input: unknown) {
         updated_at = now()
       where id = ${id} returning *`;
 
+    if (before.stage !== row.stage) {
+      if (STAGE_APPROVAL.has(row.stage) && !isAdmin(me) && me.position !== 'PM') await requestApproval(tx as never, row, me.id);
+      if (['Tasdiqlandi', 'Ijobiy'].includes(row.stage)) await notifyAuthor(tx as never, row, `${row.stage === 'Tasdiqlandi' ? '✅ Tasdiqlandi' : '👍 Ijobiy'}: «${row.title}» (${me.name})`, me.id);
+    }
     const parts: string[] = [];
     if (before.stage !== row.stage) parts.push(`bosqich: ${before.stage} → ${row.stage}`);
     if (before.rekda !== row.rekda) parts.push(row.rekda ? 'rekdaga belgilandi' : 'rekdadan olindi');
@@ -131,7 +147,7 @@ export async function reorderContents(me: Me, input: unknown) {
     // ko'rsatilgan kontentlar o'z o'rin to'plamini saqlab, yangi tartibda joylashadi (filtrda yashirinlari joyida qoladi)
     const slots = rows.filter((r) => b.ids.includes(r.id)).map((r) => r.position).sort((a, c) => a - c);
     for (let i = 0; i < b.ids.length; i++) await tx`update contents set position = ${slots[i]} where id = ${b.ids[i]}`;
-    await audit(tx as never, { actor: me, action: 'update', entity: 'content', entityId: null, summary: `${p.name}: kontentlar tartibi o'zgartirildi` });
+    await audit(tx as never, { actor: me, action: 'update', entity: 'content', entityId: null, summary: `${p.name}: kontentlar tartibi o'zgartirildi`, quiet: true });
   });
   return { ok: true };
 }

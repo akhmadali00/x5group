@@ -1,5 +1,6 @@
 import { db } from './db';
 import { can, isAdmin, TARGET_ROLES, type Me } from './perm';
+import { REVERTABLE_SQL } from './services/history';
 
 // Brauzer ilovasi (public/app/app.js) kutadigan "eski" jadval shakli.
 // Hamma filtrlash SERVERDA: foydalanuvchi ruxsat etilmagan qatorni umuman olmaydi.
@@ -37,6 +38,8 @@ export type Datasets = {
   campaigns: R[];
   daily: R[];
   arch_contents: R[];
+  audit: R[];
+  backups: R[];
 };
 
 export type Loaded = { datasets: Datasets; archived: Record<string, string> };
@@ -45,7 +48,7 @@ export async function loadDatasets(me: Me): Promise<Loaded> {
   const sql = db();
   const admin = isAdmin(me);
 
-  const [members, projects, pms, mps, contents, tasks, shoots, campaigns, daily, archContents] = await Promise.all([
+  const [members, projects, pms, mps, contents, tasks, shoots, campaigns, daily, archContents, auditRows, backupRows] = await Promise.all([
     sql<R[]>`select * from members where active order by created_at, name`,
     sql<R[]>`select * from projects where archived_at is null order by created_at, name`,
     sql<R[]>`select project_id, member_id from project_pms`,
@@ -55,7 +58,9 @@ export async function loadDatasets(me: Me): Promise<Loaded> {
     sql<R[]>`select * from shoots ${admin ? sql`` : sql`where archived_at is null`} order by shoot_date, shoot_time`,
     sql<R[]>`select * from campaigns order by started_on desc nulls last`,
     sql<R[]>`select * from daily_results order by day`,
-    admin ? sql<R[]>`select * from contents where archived_at is not null order by archived_at desc` : Promise.resolve([] as R[])
+    admin ? sql<R[]>`select * from contents where archived_at is not null order by archived_at desc` : Promise.resolve([] as R[]),
+    admin ? sql<R[]>`select id, at, actor_name, action, entity, summary, reverted_at, (${sql.unsafe(REVERTABLE_SQL)}) as can_revert from audit_log order by id desc limit 300` : Promise.resolve([] as R[]),
+    admin ? sql<R[]>`select id, created_at, kind, row_counts from backups order by id desc limit 60` : Promise.resolve([] as R[])
   ]);
 
   const mName = new Map<string, string>(members.map((m) => [m.id, m.name]));
@@ -88,6 +93,7 @@ export async function loadDatasets(me: Me): Promise<Loaded> {
     }
     if (admin || self) {
       row.id = m.id;
+      row.tg_holat = m.telegram_status;
       row.email = orEmpty(m.email);
       row.ruxsat = (m.permissions || []).join(', ');
     }
@@ -97,9 +103,6 @@ export async function loadDatasets(me: Me): Promise<Loaded> {
         .map((id) => pName.get(id) || '')
         .filter(Boolean)
         .join(', ');
-    }
-    if (admin) {
-      row.tg_holat = m.telegram_status;
     }
     return row;
   });
@@ -269,7 +272,9 @@ export async function loadDatasets(me: Me): Promise<Loaded> {
       shoots: shootsDs,
       campaigns: campaignsDs,
       daily: dailyDs,
-      arch_contents: archContentsDs
+      arch_contents: archContentsDs,
+      backups: backupRows.map((b) => ({ id: String(b.id), vaqt: archivedLabel(b.created_at), tur: b.kind, hajm: Object.values(b.row_counts as Record<string, number>).reduce((a, x) => a + x, 0) })),
+      audit: auditRows.map((a) => ({ id: String(a.id), kim: a.actor_name || 'Tizim', amal: a.action, tur: a.entity, mazmun: a.summary, vaqt: archivedLabel(a.at), qaytarilgan: b01(a.reverted_at), qaytarsa: b01(a.can_revert) }))
     },
     archived: admin ? archived : {}
   };

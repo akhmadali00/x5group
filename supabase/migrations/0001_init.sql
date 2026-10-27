@@ -227,6 +227,26 @@ create table if not exists public.reminder_log (
   primary key (kind, ref, chat_id)
 );
 
+-- Bot yuboradigan xabarlar navbati (xabarlar o'zgarish bilan bir tranzaksiyada yoziladi, keyin yuboriladi)
+create table if not exists public.outbox (
+  id         bigserial primary key,
+  chat_id    bigint not null,
+  text       text not null,
+  buttons    jsonb,
+  created_at timestamptz not null default now(),
+  sent_at    timestamptz,
+  attempts   int not null default 0,
+  last_error text
+);
+create index if not exists outbox_pending_idx on public.outbox (id) where sent_at is null;
+
+-- Telegramni ulash uchun bir martalik kodlar (t.me/bot?start=KOD)
+create table if not exists public.link_codes (
+  code       text primary key,
+  member_id  uuid not null references public.members(id) on delete cascade,
+  expires_at timestamptz not null
+);
+
 -- Bot suhbati holati (masalan, qaysi so'rovga javob kutilmoqda)
 create table if not exists public.bot_state (
   chat_id bigint primary key,
@@ -284,6 +304,8 @@ alter table public.audit_log         enable row level security;
 alter table public.telegram_requests enable row level security;
 alter table public.reminder_log      enable row level security;
 alter table public.bot_state         enable row level security;
+alter table public.outbox            enable row level security;
+alter table public.link_codes        enable row level security;
 alter table public.settings          enable row level security;
 alter table public.backups           enable row level security;
 alter table public.sessions          enable row level security;

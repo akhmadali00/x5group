@@ -3,6 +3,7 @@ import { db } from '../db';
 import { audit } from '../audit';
 import { forbidden, notFound } from '../http';
 import { isAdmin, type Me } from '../perm';
+import { notifyShoot } from '../notify';
 import { memberIdByName, projectByName, snapshot, zStr } from './common';
 
 const Status = z.enum(['Rejada', 'Tugatildi', "Bekor bo'ldi", "Ko'chirildi"]);
@@ -30,6 +31,7 @@ export async function createShoot(me: Me, input: unknown) {
       insert into shoots (project_id, place, shoot_date, shoot_time, operator_id, brandface_id, status, note, created_by)
       values (${p.id}, ${b.place}, ${b.date}, ${b.time}, ${op}, ${bf}, ${b.status}, ${b.note}, ${me.id}) returning *`;
     await audit(tx as never, { actor: me, action: 'create', entity: 'shoot', entityId: row.id, summary: `Yangi syomka: ${p.name}, ${b.date} ${b.time}, ${b.place}`, after: snapshot(row) });
+    await notifyShoot(tx as never, row, 'new', me.id);
     return row.id as string;
   });
   return { id };
@@ -51,6 +53,9 @@ export async function updateShoot(me: Me, id: string, input: unknown) {
     const parts: string[] = [];
     if (before.status !== row.status) parts.push(`holat: ${before.status} → ${row.status}`);
     if (before.shoot_date !== row.shoot_date || before.shoot_time !== row.shoot_time) parts.push(`vaqt: ${before.shoot_date} ${before.shoot_time} → ${row.shoot_date} ${row.shoot_time}`);
+    const moved = before.shoot_date !== row.shoot_date || before.shoot_time !== row.shoot_time || before.place !== row.place;
+    if (row.status === "Bekor bo'ldi" && before.status !== row.status) await notifyShoot(tx as never, row, 'cancelled', me.id);
+    else if (moved || (before.status !== row.status && row.status === "Ko'chirildi")) await notifyShoot(tx as never, row, 'moved', me.id, before);
     await audit(tx as never, { actor: me, action: 'update', entity: 'shoot', entityId: id, summary: `Syomka yangilandi: ${p.name}${parts.length ? ' (' + parts.join('; ') + ')' : ''}`, before: snapshot(before), after: snapshot(row) });
   });
   return { ok: true };

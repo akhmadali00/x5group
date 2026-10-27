@@ -3,6 +3,7 @@ import { db } from '../db';
 import { audit } from '../audit';
 import { bad, forbidden, notFound } from '../http';
 import { isAdmin, type Me } from '../perm';
+import { notifyTaskAssigned } from '../notify';
 import { addDays, memberIdByName, snapshot, todayTashkent, zInt, zStr } from './common';
 
 const Status = z.enum(['Boshlanmagan', 'Jarayonda', 'Tayyor', 'Tugatildi']);
@@ -26,6 +27,7 @@ export async function createTask(me: Me, input: unknown) {
       insert into tasks (assignee_id, title, note, assigned_on, duration_days, due_on, status, created_by)
       values (${who}, ${b.title}, ${b.note}, ${today}, ${b.durationDays}, ${addDays(today, b.durationDays!)}, ${b.status}, ${me.id}) returning *`;
     await audit(tx as never, { actor: me, action: 'create', entity: 'task', entityId: row.id, summary: `Yangi vazifa: «${b.title}» → ${b.assignee}`, after: snapshot(row) });
+    await notifyTaskAssigned(tx as never, row, me.id);
     return row.id as string;
   });
   return { id };
@@ -59,6 +61,7 @@ export async function updateTask(me: Me, id: string, input: unknown) {
         note = ${note}, status = ${status},
         done_at = ${finished ? before.done_at ?? new Date() : null}
       where id = ${id} returning *`;
+    if (before.assignee_id !== row.assignee_id) await notifyTaskAssigned(tx as never, row, me.id);
     const st = before.status !== row.status ? ` (${before.status} → ${row.status})` : '';
     await audit(tx as never, { actor: me, action: 'update', entity: 'task', entityId: id, summary: `Vazifa yangilandi: «${row.title}»${st}`, before: snapshot(before), after: snapshot(row) });
   });
