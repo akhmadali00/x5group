@@ -1,8 +1,6 @@
 import type { Metadata, Viewport } from 'next';
-import { Inter } from 'next/font/google';
+import '@fontsource-variable/inter';
 import './globals.css';
-
-const inter = Inter({ subsets: ['latin', 'cyrillic'], variable: '--font-inter', display: 'swap' });
 
 export const metadata: Metadata = {
   title: 'x5group',
@@ -16,7 +14,7 @@ const V = process.env.NEXT_PUBLIC_BUILD_ID || 'dev';
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="uz" className={inter.variable} suppressHydrationWarning>
+    <html lang="uz" suppressHydrationWarning>
       <head>
         <link rel="stylesheet" href={`/app/app.css?v=${V}`} />
       </head>

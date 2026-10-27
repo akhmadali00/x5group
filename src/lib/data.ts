@@ -94,6 +94,7 @@ export async function loadDatasets(me: Me): Promise<Loaded> {
     if (admin || self) {
       row.id = m.id;
       row.tg_holat = m.telegram_status;
+      if (self) row.totp = m.totp_enabled ? 1 : 0;
       row.email = orEmpty(m.email);
       row.ruxsat = (m.permissions || []).join(', ');
     }

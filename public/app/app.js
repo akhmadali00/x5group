@@ -1765,9 +1765,54 @@
       });
       fTgBot.append(el('label', null, 'Telegram bot'), stText, linkBtn, linkOut);
     }
+    // Admin uchun 2 bosqichli kirish (Google Authenticator va shunga o'xshash ilovalar)
+    const f2fa = el('div', 'lx-field lx-wide');
+    if (mode === 'self' && m && m.rol === 'Admin') {
+      f2fa.append(el('label', null, '2 bosqichli kirish (Admin)'));
+      const out = el('div', 'lx-hint2');
+      const draw2fa = () => {
+        out.replaceChildren();
+        if (Number(m.totp) === 1) {
+          out.append(document.createTextNode('Yoqilgan ✓ — kirishda ilovadagi kod so\'raladi. '));
+          const pw = mkInput('password', '', 'Parol', { autocomplete: 'current-password' });
+          const cd = mkInput('text', '', '6 xonali kod', { inputmode: 'numeric', maxlength: '6', autocomplete: 'one-time-code' });
+          const off = el('button', 'lx-btn danger', "O'chirish", { type: 'button' });
+          const msg = el('div', 'lx-hint2');
+          off.addEventListener('click', () => {
+            off.disabled = true;
+            X5.api('POST', '/api/auth/totp/disable', { password: pw.value, code: cd.value }).then(() => X5.reload().then(() => { closeSheet(); toast("2 bosqichli kirish o'chirildi"); })).catch((e) => { msg.textContent = e.message; }).then(() => { off.disabled = false; });
+          });
+          out.append(pw, cd, off, msg);
+        } else {
+          const go = el('button', 'lx-btn', 'Yoqish', { type: 'button' });
+          out.append(document.createTextNode("Yoqilmagan. Tavsiya etiladi: parol bilib olinsa ham, kod bo'lmasa kirib bo'lmaydi. "), go);
+          go.addEventListener('click', () => {
+            go.disabled = true;
+            X5.api('POST', '/api/auth/totp/start').then((r) => {
+              out.replaceChildren();
+              const img = el('img', null, null, { src: r.qr, alt: 'QR kod', width: '220', height: '220' });
+              const cd = mkInput('text', '', 'Ilovadagi 6 xonali kod', { inputmode: 'numeric', maxlength: '6', autocomplete: 'one-time-code' });
+              const ok2 = el('button', 'lx-btn primary', 'Tasdiqlash va yoqish', { type: 'button' });
+              const msg = el('div', 'lx-hint2');
+              out.append(
+                document.createTextNode("1) Telefoningizda Google Authenticator (yoki Authy) ni oching, QR kodni skanerlang. Skaner ishlamasa, shu kalitni qo'lda kiriting: "),
+                el('code', null, r.secret), el('br'), img, el('br'),
+                document.createTextNode('2) Ilovada ko\'ringan 6 xonali kodni kiriting:'), cd, ok2, msg
+              );
+              ok2.addEventListener('click', () => {
+                ok2.disabled = true;
+                X5.api('POST', '/api/auth/totp/enable', { code: cd.value }).then(() => X5.reload().then(() => { closeSheet(); toast('2 bosqichli kirish yoqildi'); })).catch((e) => { msg.textContent = e.message; }).then(() => { ok2.disabled = false; });
+              });
+            }).catch((e) => { out.textContent = e.message; });
+          });
+        }
+      };
+      draw2fa();
+      f2fa.append(out);
+    } else f2fa.hidden = true;
     if (!fTgBot.childNodes.length) fTgBot.hidden = true;
     const fg = el('div', 'lx-fgrid');
-    fg.append(fName, fEmail, fPass, fKasb, fPhone, fTg, fRang, fLav, fRol, fProj, fPerm, fCur, fNew, fTgBot);
+    fg.append(fName, fEmail, fPass, fKasb, fPhone, fTg, fRang, fLav, fRol, fProj, fPerm, fCur, fNew, f2fa, fTgBot);
     sheet.append(fg);
     if (mode === 'self') sheet.append(el('p', 'lx-lock', "Boshqa ma'lumotlarni (lavozim, rol, ruxsatlar) faqat Admin o'zgartiradi."));
     sheet.append(sheetActions('cancel-member', mode === 'new' ? "Qo'shish" : 'Saqlash', 'save'));
@@ -2305,7 +2350,7 @@
     }
   ];
   const drawArxiv = () => {
-    const items = ARXIV.concat([{ id: 'tarix', label: 'Tarix', src: 'audit', custom: true }, { id: 'zaxira', label: 'Zaxira', src: 'backups', custom: true }]).map((sec) => {
+    const items = ARXIV.concat([{ id: 'tarix', label: 'Tarix', src: 'audit', custom: true }, { id: 'zaxira', label: 'Zaxira', src: 'backups', custom: true }, { id: 'bot', label: 'Bot', src: 'audit', custom: true }]).map((sec) => {
       const d = dash.data(sec.src);
       const rows = d.status === 'ok' ? (sec.custom ? d.data : d.data.filter((x) => archived.has(sec.prefix + x.id))) : [];
       return { sec, d, rows };
@@ -2322,6 +2367,37 @@
     const { sec, d, rows } = cur;
     if (d.status === 'loading') { skeleton(arxivBox); return; }
     if (d.status !== 'ok') { arxivBox.append(el('div', 'lx-fail', 'Failed to load')); return; }
+    if (sec.id === 'bot') {
+      arxivBox.append(el('h2', null, 'Telegram bot holati'));
+      const box = el('div', 'lx-list');
+      const note = el('p', 'lx-hint2', 'Yuklanmoqda…');
+      box.append(note);
+      arxivBox.append(box);
+      X5.api('GET', '/api/telegram/webhook').then((i) => {
+        box.replaceChildren();
+        const row = (k, v, good) => { const r = el('div', 'lx-arow'); r.style.gridTemplateColumns = 'minmax(12rem,1fr) 3fr'; r.append(el('div', 'lx-c', k), el('div', 'lx-c', (good === undefined ? '' : good ? '✅ ' : '⚠️ ') + v)); box.append(r); };
+        row('Bot', '@' + i.username);
+        row('TELEGRAM_BOT_TOKEN', i.env.token ? "o'rnatilgan" : "yo'q", i.env.token);
+        row('TELEGRAM_WEBHOOK_SECRET', i.env.secret ? "o'rnatilgan" : "yo'q", i.env.secret);
+        row('CRON_SECRET (eslatmalar uchun)', i.env.cron ? "o'rnatilgan" : "yo'q", i.env.cron);
+        row('Webhook', i.webhookUrl || "o'rnatilmagan", !!i.webhookUrl);
+        row('Telegramda kutayotgan yangilanish', String(i.pending));
+        row('Yuborilmagan xabarlar navbati', String(i.queue), i.queue === 0);
+        if (i.lastError) row('Oxirgi xato', i.lastError, false);
+        row('Zaxira fayl shifrlash (BACKUP_KEY)', i.env.backupKey ? 'yoqilgan' : "yo'q (fayl parol xeshlarisiz bo'ladi)");
+        row('AI yordamchi kaliti', i.env.ai ? "o'rnatilgan" : "yo'q");
+        const act = el('div', 'lx-actions');
+        const hint = el('span', 'lx-hint');
+        const b = el('button', 'lx-btn primary', i.webhookUrl ? 'Webhookni qayta o\'rnatish' : "Webhookni o'rnatish", { type: 'button' });
+        b.addEventListener('click', () => {
+          b.disabled = true;
+          X5.api('POST', '/api/telegram/webhook').then((r) => { hint.classList.remove('bad'); hint.textContent = "O'rnatildi: " + r.url; }).catch((e) => { hint.classList.add('bad'); hint.textContent = e.message; }).then(() => { b.disabled = false; });
+        });
+        act.append(hint, b);
+        arxivBox.append(act);
+      }).catch((e) => { note.textContent = e.message; });
+      return;
+    }
     if (sec.id === 'zaxira') {
       arxivBox.append(el('h2', null, 'Zaxira nusxalar'));
       arxivBox.append(el('p', 'lx-hint2', "Har kuni ertalab avtomatik zaxira olinadi va Adminga Telegramda fayl sifatida yuboriladi. Oxirgi 30 kun saqlanadi. Tiklashdan oldin joriy holatning zaxirasi avtomatik olinadi."));
