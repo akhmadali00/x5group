@@ -36,6 +36,7 @@ export type Datasets = {
   shoots: R[];
   campaigns: R[];
   daily: R[];
+  arch_contents: R[];
 };
 
 export type Loaded = { datasets: Datasets; archived: Record<string, string> };
@@ -44,17 +45,17 @@ export async function loadDatasets(me: Me): Promise<Loaded> {
   const sql = db();
   const admin = isAdmin(me);
 
-  const [members, projects, pms, mps, stages, contents, tasks, shoots, campaigns, daily] = await Promise.all([
+  const [members, projects, pms, mps, contents, tasks, shoots, campaigns, daily, archContents] = await Promise.all([
     sql<R[]>`select * from members where active order by created_at, name`,
     sql<R[]>`select * from projects where archived_at is null order by created_at, name`,
     sql<R[]>`select project_id, member_id from project_pms`,
     sql<R[]>`select member_id, project_id from member_projects`,
-    sql<R[]>`select * from project_stages`,
     sql<R[]>`select * from contents where archived_at is null order by position, created_at`,
     sql<R[]>`select * from tasks ${admin ? sql`` : sql`where archived_at is null and assignee_id = ${me.id}`} order by created_at`,
     sql<R[]>`select * from shoots ${admin ? sql`` : sql`where archived_at is null`} order by shoot_date, shoot_time`,
     sql<R[]>`select * from campaigns order by started_on desc nulls last`,
-    sql<R[]>`select * from daily_results order by day`
+    sql<R[]>`select * from daily_results order by day`,
+    admin ? sql<R[]>`select * from contents where archived_at is not null order by archived_at desc` : Promise.resolve([] as R[])
   ]);
 
   const mName = new Map<string, string>(members.map((m) => [m.id, m.name]));
@@ -139,16 +140,24 @@ export async function loadDatasets(me: Me): Promise<Loaded> {
   });
   const projectsDs = visibleProjects.map((p) => ({ loyiha: p.name }));
 
-  const stageBy = new Map<string, R>(stages.map((s) => [s.project_id, s]));
-  const stagesDs = visibleProjects.map((p) => {
-    const s = stageBy.get(p.id) || {};
-    return { loyiha: p.name, goyalar: s.ideas || 0, skript: s.scripts || 0, montaj: s.editing || 0, joylangan: s.posted || 0, rekda: s.rekda || 0 };
-  });
+  // Bosqich sonlari kontentlardan avtomatik hisoblanadi (qo'lda kiritilmaydi)
+  const BUCKET: Record<string, 'goyalar' | 'skript' | 'montaj' | 'joylangan'> = {
+    "G'oya": 'goyalar', Ijobiy: 'goyalar',
+    'Skript Tayyor': 'skript', 'Syomka Qilindi': 'skript', 'TZ Berildi': 'skript',
+    'Montaj Tayyor': 'montaj', Tasdiqlandi: 'montaj',
+    'Post Joylandi': 'joylangan'
+  };
+  const counts = new Map<string, Record<string, number>>();
+  for (const c of contents) {
+    const o = counts.get(c.project_id) || counts.set(c.project_id, { goyalar: 0, skript: 0, montaj: 0, joylangan: 0, rekda: 0 }).get(c.project_id)!;
+    const k = BUCKET[c.stage];
+    if (k) o[k]++;
+    if (c.rekda) o.rekda++;
+  }
+  const stagesDs = visibleProjects.map((p) => ({ loyiha: p.name, goyalar: 0, skript: 0, montaj: 0, joylangan: 0, rekda: 0, ...(counts.get(p.id) || {}) }));
 
   // ---- kontentlar ----
-  const contentsDs = contents
-    .filter((c) => visibleIds.has(c.project_id))
-    .map((c) => ({
+  const contentRow = (c: R) => ({
       id: c.id,
       loyiha: pName.get(c.project_id) || '',
       tartib: c.position,
@@ -177,10 +186,15 @@ export async function loadDatasets(me: Me): Promise<Loaded> {
       izoh_instagram: orEmpty(c.note_instagram),
       izoh_telegram: orEmpty(c.note_telegram),
       izoh_youtube: orEmpty(c.note_youtube)
-    }));
+    });
+  const contentsDs = contents.filter((c) => visibleIds.has(c.project_id)).map(contentRow);
 
   // ---- vazifalar ----
   const archived: Record<string, string> = {};
+  const archContentsDs = archContents.map((c) => {
+    archived['content:' + c.id] = archivedLabel(c.archived_at);
+    return contentRow(c);
+  });
   const tasksDs = tasks.map((t) => {
     if (t.archived_at) archived['task:' + t.id] = archivedLabel(t.archived_at);
     return {
@@ -254,7 +268,8 @@ export async function loadDatasets(me: Me): Promise<Loaded> {
       tasks: tasksDs,
       shoots: shootsDs,
       campaigns: campaignsDs,
-      daily: dailyDs
+      daily: dailyDs,
+      arch_contents: archContentsDs
     },
     archived: admin ? archived : {}
   };

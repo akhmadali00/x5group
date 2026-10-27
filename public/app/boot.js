@@ -24,6 +24,7 @@
 
   X5.reload = function () {
     return X5.api('GET', '/api/data').then(function (d) {
+      window.X5app.clearOverrides();
       window.X5app.setMe(d.me.name);
       window.X5app.setArchived(d.archived || {});
       window.dash.setData(d.datasets);
@@ -31,14 +32,14 @@
   };
 
   // O'zgartiruvchi so'rov: muvaffaqiyatda ma'lumotni qayta yuklaydi, xatoda xabar ko'rsatadi
-  X5.mutate = function (method, url, body, okText) {
+  X5.mutate = function (method, url, body, okText, quiet) {
     return X5.api(method, url, body).then(function (r) {
       return X5.reload().then(function () {
         if (okText) window.X5app.toast(okText);
         return r;
       });
     }, function (e) {
-      window.X5app.toast(e.message || 'Xatolik');
+      if (!quiet) window.X5app.toast(e.message || 'Xatolik');
       throw e;
     });
   };

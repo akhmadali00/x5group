@@ -66,34 +66,34 @@
   <div class="lx-sheet" id="project-sheet" hidden>
     <h3>Yangi loyiha</h3>
     <div class="lx-fgrid">
-      <div class="lx-field"><label>Loyiha nomi</label><input type="text" placeholder="Loyiha nomi" autocomplete="off"></div>
-      <div class="lx-field lx-wide"><label>Mas'ul PM</label><div class="lx-check-row" id="proj-new-pm"></div></div>
-      <div class="lx-field"><label>Shartnoma boshlangan sana</label><input type="date" id="proj-start" min="2000-01-01" max="2099-12-31"></div>
-      <div class="lx-field"><label>Muddat (oy)</label><input type="number" id="proj-months" min="1" max="60" placeholder="3"></div>
+      <div class="lx-field"><label>Loyiha nomi</label><input type="text" data-f="name" placeholder="Loyiha nomi" autocomplete="off"></div>
+      <div class="lx-field lx-wide"><label>Mas'ul PM</label><div class="lx-check-row" id="proj-new-pm" data-f="pms"></div></div>
+      <div class="lx-field"><label>Shartnoma boshlangan sana</label><input type="date" id="proj-start" data-f="contractStart" min="2000-01-01" max="2099-12-31"></div>
+      <div class="lx-field"><label>Muddat (oy)</label><input type="number" id="proj-months" data-f="contractMonths" min="1" max="60" placeholder="3"></div>
       <div class="lx-field"><label>Tugash sanasi (avtomatik)</label><input type="text" id="proj-end" readonly placeholder="Sana va muddatni kiriting" tabindex="-1"></div>
-      <div class="lx-field"><label>Kontentlar soni</label><input type="number" min="0" placeholder="30"></div>
-      <div class="lx-field"><label>Targetga kontentlar soni (ixtiyoriy)</label><input type="number" min="0" placeholder="15"></div>
-      <div class="lx-field"><label>Loyiha egasi: ism-familya</label><input type="text" placeholder="Ism Familya" autocomplete="off"></div>
-      <div class="lx-field"><label data-ico="phone">Telefon raqami</label><input type="tel" placeholder="+998 90 123 45 67" autocomplete="off"></div>
-      <div class="lx-field"><label data-ico="telegram">Username</label><input type="text" placeholder="@username" autocomplete="off"></div>
-      <div class="lx-field"><label data-ico="instagram">Username (agar bo'lsa)</label><input type="text" placeholder="@username" autocomplete="off"></div>
+      <div class="lx-field"><label>Kontentlar soni</label><input type="number" data-f="planTotal" min="0" placeholder="30"></div>
+      <div class="lx-field"><label>Targetga kontentlar soni (ixtiyoriy)</label><input type="number" data-f="targetPlan" min="0" placeholder="15"></div>
+      <div class="lx-field"><label>Loyiha egasi: ism-familya</label><input type="text" data-f="ownerName" placeholder="Ism Familya" autocomplete="off"></div>
+      <div class="lx-field"><label data-ico="phone">Telefon raqami</label><input type="tel" data-f="ownerPhone" placeholder="+998 90 123 45 67" autocomplete="off"></div>
+      <div class="lx-field"><label data-ico="telegram">Username</label><input type="text" data-f="ownerTelegram" placeholder="@username" autocomplete="off"></div>
+      <div class="lx-field"><label data-ico="instagram">Username (agar bo'lsa)</label><input type="text" data-f="ownerInstagram" placeholder="@username" autocomplete="off"></div>
       <div class="lx-field lx-wide lx-sechead"><label>Ijtimoiy tarmoqlar va qamrov</label><p class="lx-hint2">Faqat biz yuritadigan tarmoqlarni to'ldiring: sahifa havolasi va loyiha olingan paytdagi obunachilar soni. Hozirgi son shu havola orqali har kuni avtomatik yangilanadi, o'sish «+» bilan ko'rsatiladi.</p></div>
-      <div class="lx-field"><label data-ico="instagram">Instagram sahifa havolasi</label><input type="text" id="proj-ig-link" placeholder="instagram.com/nom yoki @nom" autocomplete="off"></div>
-      <div class="lx-field"><label data-ico="instagram">Instagram obunachilari</label><input type="number" id="proj-ig" min="0" placeholder="12000"></div>
-      <div class="lx-field"><label data-ico="telegram">Telegram kanal havolasi</label><input type="text" id="proj-tg-link" placeholder="t.me/nom yoki @nom" autocomplete="off"></div>
-      <div class="lx-field"><label data-ico="telegram">Telegram obunachilari</label><input type="number" id="proj-tg" min="0" placeholder="3000"></div>
-      <div class="lx-field"><label data-ico="youtube">YouTube kanal havolasi</label><input type="text" id="proj-yt-link" placeholder="youtube.com/@nom" autocomplete="off"></div>
-      <div class="lx-field"><label data-ico="youtube">YouTube obunachilari</label><input type="number" id="proj-yt" min="0" placeholder="1000"></div>
-      <div class="lx-field"><label>Oylik qamrov (ko'rishlar soni)</label><input type="number" id="proj-oxvat" min="0" placeholder="150000"></div>
+      <div class="lx-field"><label data-ico="instagram">Instagram sahifa havolasi</label><input type="text" id="proj-ig-link" data-f="igLink" placeholder="instagram.com/nom yoki @nom" autocomplete="off"></div>
+      <div class="lx-field"><label data-ico="instagram">Instagram obunachilari</label><input type="number" id="proj-ig" data-f="igStart" min="0" placeholder="12000"></div>
+      <div class="lx-field"><label data-ico="telegram">Telegram kanal havolasi</label><input type="text" id="proj-tg-link" data-f="tgLink" placeholder="t.me/nom yoki @nom" autocomplete="off"></div>
+      <div class="lx-field"><label data-ico="telegram">Telegram obunachilari</label><input type="number" id="proj-tg" data-f="tgStart" min="0" placeholder="3000"></div>
+      <div class="lx-field"><label data-ico="youtube">YouTube kanal havolasi</label><input type="text" id="proj-yt-link" data-f="ytLink" placeholder="youtube.com/@nom" autocomplete="off"></div>
+      <div class="lx-field"><label data-ico="youtube">YouTube obunachilari</label><input type="number" id="proj-yt" data-f="ytStart" min="0" placeholder="1000"></div>
+      <div class="lx-field"><label>Oylik qamrov (ko'rishlar soni)</label><input type="number" id="proj-oxvat" data-f="reachStart" min="0" placeholder="150000"></div>
       <div class="lx-field lx-wide lx-sechead"><label>Target ma'lumot manbasi</label><p class="lx-hint2">Kampaniyalar va ko'rsatkichlar (Amount Spent, Results, Hook, Hold) shu manbadan olinadi. Token va parollar bu yerga yozilmaydi — ular serverda xavfsiz saqlanadi.</p></div>
-      <div class="lx-field"><label>Manba</label><select><option>Meta Ads API</option><option>Google Sheets</option><option>Boshqa API</option><option>Qo'lda kiritaman</option></select></div>
-      <div class="lx-field"><label>Reklama akkaunti ID (act_...) yoki havola</label><input type="text" placeholder="act_1234567890" autocomplete="off"></div>
-      <div class="lx-field"><label>Business portfolio nomi (ixtiyoriy)</label><input type="text" placeholder="Masalan, Mijoz Portfolio" autocomplete="off"></div>
+      <div class="lx-field"><label>Manba</label><select data-f="adsSource"><option>Meta Ads API</option><option>Google Sheets</option><option>Boshqa API</option><option>Qo'lda kiritaman</option></select></div>
+      <div class="lx-field"><label>Reklama akkaunti ID (act_...) yoki havola</label><input type="text" data-f="adAccount" placeholder="act_1234567890" autocomplete="off"></div>
+      <div class="lx-field"><label>Business portfolio nomi (ixtiyoriy)</label><input type="text" data-f="portfolio" placeholder="Masalan, Mijoz Portfolio" autocomplete="off"></div>
     </div>
     <div class="lx-actions">
       <span class="lx-hint"></span>
       <button type="button" class="lx-btn" data-act="cancel-project">Bekor qilish</button>
-      <button type="button" class="lx-btn primary" data-act="save-mock">Qo'shish</button>
+      <button type="button" class="lx-btn primary" data-act="save-project">Qo'shish</button>
     </div>
   </div>
 
@@ -130,17 +130,17 @@
   <div class="lx-sheet" id="task-sheet" hidden>
     <h3>Yangi vazifa</h3>
     <div class="lx-fgrid">
-      <div class="lx-field"><label>Kimga</label><select id="task-new-who"></select></div>
-      <div class="lx-field"><label>Nima vazifa</label><input type="text" placeholder="Vazifa nomi" autocomplete="off"></div>
-      <div class="lx-field lx-wide"><label>Izoh</label><textarea rows="3" placeholder="Vazifa bajarilishi haqida ma'lumot (keyinroq mas'ul a'zo ham to'ldirishi mumkin)"></textarea></div>
-      <div class="lx-field"><label>Muddat (kun)</label><input type="number" id="task-new-days" min="1" max="365" placeholder="3"></div>
+      <div class="lx-field"><label>Kimga</label><select id="task-new-who" data-f="assignee"></select></div>
+      <div class="lx-field"><label>Nima vazifa</label><input type="text" data-f="title" placeholder="Vazifa nomi" autocomplete="off"></div>
+      <div class="lx-field lx-wide"><label>Izoh</label><textarea rows="3" data-f="note" placeholder="Vazifa bajarilishi haqida ma'lumot (keyinroq mas'ul a'zo ham to'ldirishi mumkin)"></textarea></div>
+      <div class="lx-field"><label>Muddat (kun)</label><input type="number" id="task-new-days" data-f="durationDays" min="1" max="365" placeholder="3"></div>
       <div class="lx-field"><label>Topshirish sanasi (avtomatik)</label><input type="text" id="task-new-date" readonly placeholder="Muddatni kiriting" tabindex="-1"></div>
-      <div class="lx-field"><label>Holat</label><select><option>Boshlanmagan</option><option>Jarayonda</option><option>Tayyor</option><option>Tugatildi</option></select></div>
+      <div class="lx-field"><label>Holat</label><select data-f="status"><option>Boshlanmagan</option><option>Jarayonda</option><option>Tayyor</option><option>Tugatildi</option></select></div>
     </div>
     <div class="lx-actions">
       <span class="lx-hint"></span>
       <button type="button" class="lx-btn" data-act="cancel-task">Bekor qilish</button>
-      <button type="button" class="lx-btn primary" data-act="save-mock">Qo'shish</button>
+      <button type="button" class="lx-btn primary" data-act="save-newtask">Qo'shish</button>
     </div>
   </div>
   <section class="lx-tiles" id="vazifa-jami" data-card="vazifalar.korsatkich">
@@ -167,14 +167,14 @@
   <div class="lx-sheet" id="shoot-sheet" hidden>
     <h3>Yangi syomka</h3>
     <div class="lx-fgrid">
-      <div class="lx-field"><label>Mijoz<span class="lx-req">*</span></label><select id="shoot-new-client" data-req></select></div>
-      <div class="lx-field"><label>Qayerda<span class="lx-req">*</span></label><input type="text" placeholder="Joy nomi" autocomplete="off" data-req></div>
-      <div class="lx-field"><label>Sana<span class="lx-req">*</span></label><input type="date" min="2000-01-01" max="2099-12-31" data-req></div>
-      <div class="lx-field"><label>Soat<span class="lx-req">*</span></label><input type="time" data-req></div>
-      <div class="lx-field"><label>Operator<span class="lx-req">*</span></label><select id="shoot-new-op" data-req></select></div>
-      <div class="lx-field"><label>Brandface (ixtiyoriy)</label><select id="shoot-new-bf"></select></div>
-      <div class="lx-field"><label>Holat<span class="lx-req">*</span></label><select data-req><option>Rejada</option><option>Tugatildi</option><option>Bekor bo'ldi</option><option>Ko'chirildi</option></select></div>
-      <div class="lx-field"><label>Qo'shimcha (ixtiyoriy)</label><input type="text" placeholder="Kerakli narsalar, esdan chiqmasin" autocomplete="off"></div>
+      <div class="lx-field"><label>Mijoz<span class="lx-req">*</span></label><select id="shoot-new-client" data-f="project" data-req></select></div>
+      <div class="lx-field"><label>Qayerda<span class="lx-req">*</span></label><input type="text" data-f="place" placeholder="Joy nomi" autocomplete="off" data-req></div>
+      <div class="lx-field"><label>Sana<span class="lx-req">*</span></label><input type="date" data-f="date" min="2000-01-01" max="2099-12-31" data-req></div>
+      <div class="lx-field"><label>Soat<span class="lx-req">*</span></label><input type="time" data-f="time" data-req></div>
+      <div class="lx-field"><label>Operator<span class="lx-req">*</span></label><select id="shoot-new-op" data-f="operator" data-req></select></div>
+      <div class="lx-field"><label>Brandface (ixtiyoriy)</label><select id="shoot-new-bf" data-f="brandface"></select></div>
+      <div class="lx-field"><label>Holat<span class="lx-req">*</span></label><select data-f="status" data-req><option>Rejada</option><option>Tugatildi</option><option>Bekor bo'ldi</option><option>Ko'chirildi</option></select></div>
+      <div class="lx-field"><label>Qo'shimcha (ixtiyoriy)</label><input type="text" data-f="note" placeholder="Kerakli narsalar, esdan chiqmasin" autocomplete="off"></div>
     </div>
     <div class="lx-actions">
       <span class="lx-hint"></span>

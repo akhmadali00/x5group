@@ -387,6 +387,11 @@
     n.textContent = on ? '✓' : '';
     n.setAttribute('aria-checked', String(on));
   };
+  const flagClick = (n) => {
+    toggleFlag(n);
+    const on = n.classList.contains('on');
+    X5.mutate('PATCH', '/api/contents/' + n.getAttribute('data-cid'), { [n.getAttribute('data-flag')]: on }).catch(() => X5.reload());
+  };
   const archived = new Map();
   const ARCH_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/></svg>';
   const archCell = (key, allowed) => {
@@ -803,10 +808,31 @@
   };
 
   // Forma yordamchilari
-  const mkField = (label, input, cls) => {
+  const mkField = (label, input, cls, key) => {
     const f = el('div', 'lx-field' + (cls ? ' ' + cls : ''));
     f.append(el('label', null, label), input);
+    if (key) input.setAttribute('data-f', key);
     return f;
+  };
+  // data-f belgili maydonlarni yig'adi (flajoklar guruhi -> belgilanganlar ro'yxati)
+  const collectF = (sheet) => {
+    const o = {};
+    sheet.querySelectorAll('[data-f]').forEach((n) => {
+      const k = n.getAttribute('data-f');
+      if (n.classList.contains('lx-check-row')) o[k] = [...n.querySelectorAll('input:checked')].map((i) => i.getAttribute('data-val') || i.getAttribute('aria-label'));
+      else o[k] = String(n.value == null ? '' : n.value).trim();
+    });
+    return o;
+  };
+  const resetSheet = (sheet) => {
+    sheet.querySelectorAll('[data-f]').forEach((n) => {
+      if (n.classList.contains('lx-check-row')) n.querySelectorAll('input').forEach((i) => { i.checked = false; });
+      else if (n.tagName === 'SELECT') n.selectedIndex = 0;
+      else n.value = '';
+    });
+    sheet.querySelectorAll('input[readonly]').forEach((n) => { n.value = ''; });
+    const h = sheet.querySelector('.lx-hint');
+    if (h) { h.textContent = ''; h.classList.remove('bad'); }
   };
   const mkInput = (type, value, ph, extra) => {
     const i = el('input', null, null, Object.assign({ type, autocomplete: 'off' }, ph ? { placeholder: ph } : {}, extra || {}));
@@ -832,7 +858,7 @@
     const on = (checked || []).map((x) => String(x).toLowerCase());
     names.forEach((t) => {
       const l = el('label', 'lx-cb');
-      const cb = el('input', null, null, { type: 'checkbox', 'aria-label': ICONS[t] ? ICONS[t][0] : t });
+      const cb = el('input', null, null, { type: 'checkbox', 'aria-label': ICONS[t] ? ICONS[t][0] : t, 'data-val': t });
       cb.checked = on.includes(String(t).toLowerCase());
       l.append(cb);
       l.append(ICONS[t] ? ico(t) : document.createTextNode(' ' + t));
@@ -847,12 +873,12 @@
     a.append(
       el('span', 'lx-hint'),
       el('button', 'lx-btn', 'Bekor qilish', { type: 'button', 'data-act': cancelAct }),
-      el('button', 'lx-btn primary', okText, { type: 'button', 'data-act': okAct || 'save-mock' })
+      el('button', 'lx-btn primary', okText, { type: 'button', 'data-act': okAct || 'save' })
     );
     return a;
   };
 
-  // Kontent formasi: yangi kontent (hammasi bo'sh) va mavjud kontent ma'lumotlari (namuna, saqlanmaydi)
+  // Kontent formasi: yangi kontent va mavjud kontent ma'lumotlari
   const stageLocked = (st) => ((st === 'Tasdiqlandi' || st === 'Ijobiy') && !(amAdmin() || isPM()));
   const mkStageSelect = (current) => {
     const sel = el('select');
@@ -888,34 +914,47 @@
     };
     refIn.addEventListener('input', syncRef);
     syncRef();
+    const titleIn = mkInput('text', c ? c.nomi : '', isNew ? 'Masalan, Kontent 7' : '');
+    const authorSel = mkSelect(teamNames(), isNew ? (me ? me.ism : '') : c.tayyorladi);
+    const catSel = mkSelect(RUBRIKALAR, c ? c.rubrika : '', 'Tanlang');
+    const editorSel = mkSelect(frilans('Montajor').map((m) => m.ism), c ? c.montajor : '', 'Tanlang');
+    const hookIn = mkArea(c ? c.hook : '', 2);
+    const bodyIn = mkArea(c ? c.mainbody : '', 5);
+    const ctaIn = mkArea(c ? c.cta : '', 2);
     const fg = el('div', 'lx-fgrid');
     fg.append(
-      mkField('Kontent nomi', mkInput('text', c ? c.nomi : '', isNew ? 'Masalan, Kontent 7' : ''), 'lx-wide'),
-      mkField('Tayyorladi', mkSelect(teamNames(), isNew ? (me ? me.ism : '') : c.tayyorladi)),
-      mkField('Rubrika', mkSelect(RUBRIKALAR, c ? c.rubrika : '', 'Tanlang')),
-      mkField('Montajor', mkSelect(frilans('Montajor').map((m) => m.ism), c ? c.montajor : '', 'Tanlang')),
+      mkField('Kontent nomi', titleIn, 'lx-wide'),
+      mkField('Tayyorladi', authorSel),
+      mkField('Rubrika', catSel),
+      mkField('Montajor', editorSel),
       mkField('Bosqich', stageSel),
-      mkField('Hook', mkArea(c ? c.hook : '', 2), 'lx-wide'),
-      mkField('Main Body', mkArea(c ? c.mainbody : '', 5), 'lx-wide'),
-      mkField('CTA', mkArea(c ? c.cta : '', 2), 'lx-wide'),
+      mkField('Hook', hookIn, 'lx-wide'),
+      mkField('Main Body', bodyIn, 'lx-wide'),
+      mkField('CTA', ctaIn, 'lx-wide'),
       refField
     );
     sheet.append(fg);
     const post = el('fieldset', 'lx-post');
     post.append(el('legend', null, 'Joylash'));
     const pg = el('div', 'lx-fgrid');
+    const platBox = mkChecks(['instagram', 'telegram', 'youtube'], ok0 ? String(c.platformalar || '').split(',').map((x) => x.trim()) : []);
+    const autoBox = mkChecks(["Belgilangan vaqtda bot o'zi joylasin"], ok0 && Number(c.avto) === 1 ? ["Belgilangan vaqtda bot o'zi joylasin"] : []);
+    const dateIn = mkInput('date', ok0 ? c.joylash || '' : '', null, { min: '2000-01-01', max: '2099-12-31' });
+    const timeIn = mkInput('time', ok0 ? c.vaqt || '' : '');
     pg.append(
-      mkField('Platformalar', mkChecks(['instagram', 'telegram', 'youtube'], ok0 ? String(c.platformalar || '').split(',').map((x) => x.trim()) : [])),
-      mkField('Telegramga avtomatik joylash', mkChecks(["Belgilangan vaqtda bot o'zi joylasin"], ok0 && Number(c.avto) === 1 ? ["Belgilangan vaqtda bot o'zi joylasin"] : [])),
-      mkField('Joylash sanasi', mkInput('date', ok0 ? c.joylash || '' : '', null, { min: '2000-01-01', max: '2099-12-31' })),
-      mkField('Joylash vaqti', mkInput('time', ok0 ? c.vaqt || '' : '')),
+      mkField('Platformalar', platBox),
+      mkField('Telegramga avtomatik joylash', autoBox),
+      mkField('Joylash sanasi', dateIn),
+      mkField('Joylash vaqti', timeIn),
       mkField('Material (video yoki rasm)', matIn, 'lx-wide')
     );
-    const platChecks = pg.querySelector('.lx-check-row');
+    const platChecks = platBox;
     const noteBox = el('div', 'lx-pnotes lx-wide');
     const noteFields = {};
+    const noteIn = {};
     ['instagram', 'telegram', 'youtube'].forEach((k) => {
-      const f = mkField(ICONS[k][0] + ' uchun izoh', mkArea(ok0 ? c['izoh_' + k] || '' : '', 3, ICONS[k][0] + ' postining izohi (caption)'), 'lx-wide');
+      noteIn[k] = mkArea(ok0 ? c['izoh_' + k] || '' : '', 3, ICONS[k][0] + ' postining izohi (caption)');
+      const f = mkField(ICONS[k][0] + ' uchun izoh', noteIn[k], 'lx-wide');
       f.querySelector('label').prepend(ico(k));
       noteFields[k] = f;
       noteBox.append(f);
@@ -930,16 +969,18 @@
     pg.append(noteBox);
     const pst = el('div', 'lx-pstats');
     pst.append(el('span', 'lx-lab', "Platformalar bo'yicha holat"));
+    const doneChk = {};
+    const linkIn = {};
     ['telegram', 'instagram', 'youtube'].forEach((k) => {
       const r = el('div', 'lx-pstat');
       const nm = el('span', 'lx-pn');
       nm.append(ico(k), document.createTextNode(ICONS[k][0]));
-      r.append(nm, mkChecks(['Joylandi'], ok0 && isPosted(c, k) ? ['Joylandi'] : []), mkInput('url', ok0 ? c['havola_' + k] || '' : '', 'Joylangan post havolasi'));
+      doneChk[k] = mkChecks(['Joylandi'], ok0 && isPosted(c, k) ? ['Joylandi'] : []);
+      linkIn[k] = mkInput('url', ok0 ? c['havola_' + k] || '' : '', 'Joylangan post havolasi');
+      r.append(nm, doneChk[k], linkIn[k]);
       pst.append(r);
     });
-    const pa = el('div', 'lx-actions');
-    pa.append(el('button', 'lx-btn', 'Telegramga hozir joylash', { type: 'button', 'data-act': 'save-mock' }));
-    post.append(pg, pst, pa);
+    post.append(pg, pst);
     const note = el('p', 'lx-lock');
     const lock = () => {
       const open = isApproved(stageSel.value);
@@ -957,10 +998,45 @@
     const cActs = sheetActions('cancel-content', isNew ? "Qo'shish" : 'Saqlash');
     if (!isNew && amAdmin()) {
       const del = el('button', 'lx-btn danger', "Kontentni o'chirish", { type: 'button' });
-      del.addEventListener('click', () => { cActs.querySelector('.lx-hint').textContent = "Namuna: kontent o'chirilmaydi. Haqiqiy platformada avval tasdiq so'raladi. A'zolar kontentni o'chira olmaydi."; });
+      let armed = false;
+      del.addEventListener('click', () => {
+        const hint = cActs.querySelector('.lx-hint');
+        if (!armed) {
+          armed = true;
+          del.textContent = 'Tasdiqlang: arxivga yuborish';
+          hint.classList.remove('bad');
+          hint.textContent = "Kontent o'chmaydi, Arxivga ko'chadi va keyin qaytarish mumkin.";
+          return;
+        }
+        del.disabled = true;
+        X5.mutate('POST', '/api/archive', { kind: 'content', id: c.id }, 'Kontent arxivga yuborildi', true).then(() => closeSheet(), (e) => { hint.classList.add('bad'); hint.textContent = e.message; del.disabled = false; });
+      });
       cActs.prepend(del);
     }
     sheet.append(post, note, cActs);
+    sheet._submit = () => {
+      const title = titleIn.value.trim();
+      if (!title) return 'Kontent nomini kiriting';
+      const body = {
+        title, author: authorSel.value, editor: editorSel.value, category: catSel.value, stage: stageSel.value,
+        hook: hookIn.value, mainBody: bodyIn.value, cta: ctaIn.value, reference: refIn.value, material: matIn.value
+      };
+      if (isApproved(stageSel.value)) {
+        const tick = (box) => [...box.querySelectorAll('input:checked')].map((i) => i.getAttribute('data-val'));
+        Object.assign(body, {
+          platforms: tick(platBox), autoPost: tick(autoBox).length > 0, postDate: dateIn.value, postTime: timeIn.value,
+          postedOn: ['telegram', 'instagram', 'youtube'].filter((k) => tick(doneChk[k]).length),
+          linkInstagram: linkIn.instagram.value, linkTelegram: linkIn.telegram.value, linkYoutube: linkIn.youtube.value,
+          noteInstagram: noteIn.instagram.value, noteTelegram: noteIn.telegram.value, noteYoutube: noteIn.youtube.value
+        });
+      }
+      if (isNew) {
+        const proj = dash.params().loyiha;
+        if (!proj) return 'Loyiha tanlanmagan';
+        return { method: 'POST', url: '/api/contents', body: Object.assign({ project: proj }, body), ok: "Kontent qo'shildi" };
+      }
+      return { method: 'PATCH', url: '/api/contents/' + c.id, body, ok: 'Saqlandi' };
+    };
     return sheet;
   };
   const buildContentSheet = () => buildContentForm(null);
@@ -970,7 +1046,7 @@
     return c ? buildContentForm(c) : null;
   };
 
-  // Loyiha ma'lumotlarini tahrirlash oynasi (faqat Admin, namuna)
+  // Loyiha ma'lumotlarini tahrirlash oynasi (faqat Admin)
   const buildProjectEdit = (name) => {
     const pf = dash.data('profiles');
     const p = (pf.status === 'ok' ? pf.data.find((r) => r.loyiha === name) : null) || {};
@@ -997,45 +1073,52 @@
       return l;
     };
     const fg = el('div', 'lx-fgrid');
-    const withIcon = (iconKey, text, input) => {
+    const withIcon = (iconKey, text, input, key) => {
       const f = el('div', 'lx-field');
       f.append(lab(iconKey, text), input);
+      if (key) input.setAttribute('data-f', key);
       return f;
     };
+    start.setAttribute('data-f', 'contractStart');
+    months.setAttribute('data-f', 'contractMonths');
     fg.append(
-      mkField("Mas'ul PM", mkChecks(pmNames(), splitList(p.pm)), 'lx-wide'),
-      mkField('Loyiha holati', mkSelect(['Faol', 'Muzlatilgan', 'Tugagan'], p.holat || 'Faol')),
+      mkField("Mas'ul PM", mkChecks(pmNames(), splitList(p.pm)), 'lx-wide', 'pms'),
+      mkField('Loyiha holati', mkSelect(['Faol', 'Muzlatilgan', 'Tugagan'], p.holat || 'Faol'), null, 'status'),
       mkField('Shartnoma boshlangan sana', start),
       mkField('Muddat (oy)', months),
       mkField('Tugash sanasi (avtomatik)', end),
-      mkField('Kontentlar soni', mkInput('number', p.kontentlar != null ? p.kontentlar : '', '30', { min: '0' })),
-      mkField('Targetga kontentlar soni (ixtiyoriy)', mkInput('number', p.targetga != null ? p.targetga : '', '15', { min: '0' })),
-      mkField('Loyiha egasi: ism-familya', mkInput('text', p.ega || '', 'Ism Familya')),
-      withIcon('phone', 'Telefon raqami', mkInput('tel', p.ega_telefon || '', '+998 90 123 45 67')),
-      withIcon('telegram', 'Username', mkInput('text', p.ega_telegram || '', '@username')),
-      withIcon('instagram', "Username (agar bo'lsa)", mkInput('text', p.ega_instagram || '', '@username')),
+      mkField('Kontentlar soni', mkInput('number', p.kontentlar != null ? p.kontentlar : '', '30', { min: '0' }), null, 'planTotal'),
+      mkField('Targetga kontentlar soni (ixtiyoriy)', mkInput('number', p.targetga != null ? p.targetga : '', '15', { min: '0' }), null, 'targetPlan'),
+      mkField('Loyiha egasi: ism-familya', mkInput('text', p.ega || '', 'Ism Familya'), null, 'ownerName'),
+      withIcon('phone', 'Telefon raqami', mkInput('tel', p.ega_telefon || '', '+998 90 123 45 67'), 'ownerPhone'),
+      withIcon('telegram', 'Username', mkInput('text', p.ega_telegram || '', '@username'), 'ownerTelegram'),
+      withIcon('instagram', "Username (agar bo'lsa)", mkInput('text', p.ega_instagram || '', '@username'), 'ownerInstagram'),
       (() => {
         const h = el('div', 'lx-field lx-wide lx-sechead');
         h.append(el('label', null, 'Ijtimoiy tarmoqlar va qamrov'), el('p', 'lx-hint2', "Faqat biz yuritadigan tarmoqlarni to'ldiring: sahifa havolasi va loyiha olingan paytdagi obunachilar soni. Hozirgi son shu havola orqali har kuni avtomatik yangilanadi."));
         return h;
       })(),
-      withIcon('instagram', 'Instagram sahifa havolasi', mkInput('text', p.ig_havola || '', 'instagram.com/nom yoki @nom')),
-      withIcon('instagram', 'Instagram obunachilari', mkInput('number', p.ig_boshlang != null ? p.ig_boshlang : '', '12000', { min: '0' })),
-      withIcon('telegram', 'Telegram kanal havolasi', mkInput('text', p.tg_havola || '', 't.me/nom yoki @nom')),
-      withIcon('telegram', 'Telegram obunachilari', mkInput('number', p.tg_boshlang != null ? p.tg_boshlang : '', '3000', { min: '0' })),
-      withIcon('youtube', 'YouTube kanal havolasi', mkInput('text', p.yt_havola || '', 'youtube.com/@nom')),
-      withIcon('youtube', 'YouTube obunachilari', mkInput('number', p.yt_boshlang != null ? p.yt_boshlang : '', '1000', { min: '0' })),
-      mkField("Oylik qamrov (ko'rishlar soni)", mkInput('number', p.oxvat_boshlang != null ? p.oxvat_boshlang : '', '150000', { min: '0' })),
+      withIcon('instagram', 'Instagram sahifa havolasi', mkInput('text', p.ig_havola || '', 'instagram.com/nom yoki @nom'), 'igLink'),
+      withIcon('instagram', 'Instagram obunachilari', mkInput('number', p.ig_boshlang != null ? p.ig_boshlang : '', '12000', { min: '0' }), 'igStart'),
+      withIcon('telegram', 'Telegram kanal havolasi', mkInput('text', p.tg_havola || '', 't.me/nom yoki @nom'), 'tgLink'),
+      withIcon('telegram', 'Telegram obunachilari', mkInput('number', p.tg_boshlang != null ? p.tg_boshlang : '', '3000', { min: '0' }), 'tgStart'),
+      withIcon('youtube', 'YouTube kanal havolasi', mkInput('text', p.yt_havola || '', 'youtube.com/@nom'), 'ytLink'),
+      withIcon('youtube', 'YouTube obunachilari', mkInput('number', p.yt_boshlang != null ? p.yt_boshlang : '', '1000', { min: '0' }), 'ytStart'),
+      mkField("Oylik qamrov (ko'rishlar soni)", mkInput('number', p.oxvat_boshlang != null ? p.oxvat_boshlang : '', '150000', { min: '0' }), null, 'reachStart'),
       (() => {
         const h = el('div', 'lx-field lx-wide lx-sechead');
         h.append(el('label', null, "Target ma'lumot manbasi"), el('p', 'lx-hint2', "Kampaniyalar va ko'rsatkichlar (Amount Spent, Results, Hook, Hold) shu manbadan olinadi. Token va parollar bu yerga yozilmaydi — ular serverda xavfsiz saqlanadi."));
         return h;
       })(),
-      mkField('Manba', mkSelect(["Meta Ads API", "Google Sheets", "Boshqa API", "Qo'lda kiritaman"], p.manba || "Meta Ads API")),
-      mkField('Reklama akkaunti ID (act_...) yoki havola', mkInput('text', p.akkaunt || '', 'act_1234567890')),
-      mkField('Business portfolio nomi (ixtiyoriy)', mkInput('text', p.portfolio || '', 'Masalan, Mijoz Portfolio'))
+      mkField('Manba', mkSelect(["Meta Ads API", "Google Sheets", "Boshqa API", "Qo'lda kiritaman"], p.manba || "Meta Ads API"), null, 'adsSource'),
+      mkField('Reklama akkaunti ID (act_...) yoki havola', mkInput('text', p.akkaunt || '', 'act_1234567890'), null, 'adAccount'),
+      mkField('Business portfolio nomi (ixtiyoriy)', mkInput('text', p.portfolio || '', 'Masalan, Mijoz Portfolio'), null, 'portfolio')
     );
     sheet.append(fg, sheetActions('cancel-content', 'Saqlash'));
+    sheet._submit = () => {
+      if (!p.id) return 'Loyiha topilmadi';
+      return { method: 'PATCH', url: '/api/projects/' + p.id, body: collectF(sheet), ok: 'Loyiha saqlandi' };
+    };
     return sheet;
   };
 
@@ -1277,7 +1360,10 @@
       cntStage.textContent = cntPerson.textContent = cntPlat.textContent = String(shown.length);
       shownIds = shown.map((c) => c.id);
       const canDrag = fs.key === 'tartib' && fs.dir === 1 && !fs.stage && !fs.person && !fs.plat;
-      const saveOrder = () => { fs.orders[name] = [...body.querySelectorAll('.lx-crow')].map((r) => r.getAttribute('data-content')); };
+      const saveOrder = () => {
+        fs.orders[name] = [...body.querySelectorAll('.lx-crow')].map((r) => r.getAttribute('data-content'));
+        X5.mutate('PUT', '/api/contents/order', { project: name, ids: fs.orders[name] }).catch(() => X5.reload());
+      };
       if (!items.length) body.append(el('div', 'lx-empty', 'Kontentlar hali kiritilmagan.'));
       else if (!shown.length) body.append(el('div', 'lx-empty', "Filtrga mos kontent yo'q."));
       shown.forEach((c) => {
@@ -1608,6 +1694,12 @@
       b.addEventListener('click', () => { rang = c; swBox.querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', String(x === b))); });
       swBox.append(b);
     });
+    const passIn = mkInput('password', '', mode === 'new' ? 'Kamida 8 belgi' : "O'zgartirmaslik uchun bo'sh qoldiring", { autocomplete: 'new-password' });
+    const curPassIn = mkInput('password', '', '', { autocomplete: 'current-password' });
+    const newPassIn = mkInput('password', '', "Kamida 8 belgi (o'zgartirmasangiz bo'sh qoldiring)", { autocomplete: 'new-password' });
+    const fPass = mkField(mode === 'new' ? "Boshlang'ich parol" : 'Yangi parol (Admin belgilaydi)', passIn);
+    const fCur = mkField('Joriy parol', curPassIn);
+    const fNew = mkField('Yangi parol', newPassIn);
     const fRang = mkField("Rang (Kontentlar va Vazifalarda ism rangi)", swBox, 'lx-wide');
     const fName = mkField('Ism', nameIn);
     const fEmail = mkField('Email (kirish uchun)', emailIn);
@@ -1626,6 +1718,9 @@
       const self = mode === 'self';
       fRang.classList.toggle('lx-hidden', !acct);
       fEmail.classList.toggle('lx-hidden', !acct || self);
+      fPass.classList.toggle('lx-hidden', !acct || self);
+      fCur.classList.toggle('lx-hidden', !(acct && self));
+      fNew.classList.toggle('lx-hidden', !(acct && self));
       fKasb.classList.toggle('lx-hidden', acct);
       fLav.classList.toggle('lx-hidden', !acct || self);
       fRol.classList.toggle('lx-hidden', !acct || self);
@@ -1654,39 +1749,44 @@
       sheet.append(seg);
     }
     const fg = el('div', 'lx-fgrid');
-    fg.append(fName, fEmail, fKasb, fPhone, fTg, fRang, fLav, fRol, fProj, fPerm);
+    fg.append(fName, fEmail, fPass, fKasb, fPhone, fTg, fRang, fLav, fRol, fProj, fPerm, fCur, fNew);
     sheet.append(fg);
     if (mode === 'self') sheet.append(el('p', 'lx-lock', "Boshqa ma'lumotlarni (lavozim, rol, ruxsatlar) faqat Admin o'zgartiradi."));
-    sheet.append(sheetActions('cancel-member', mode === 'new' ? "Qo'shish" : 'Saqlash', 'save-member'));
+    sheet.append(sheetActions('cancel-member', mode === 'new' ? "Qo'shish" : 'Saqlash', 'save'));
     apply();
-    sheet._save = () => {
-      const ism = nameIn.value.trim();
-      if (!ism) return 'Ismni kiriting';
-      const base = { ism, telefon: phoneIn.value.trim(), telegram: tgIn.value.trim(), rang };
-      if (mode === 'self') { applyPatch(m, base); return null; }
+    sheet._submit = () => {
+      const name = nameIn.value.trim();
+      if (!name) return 'Ismni kiriting';
+      const base = { name, phone: phoneIn.value, telegram: tgIn.value };
+      if (mode === 'self') {
+        Object.assign(base, { color: rang });
+        const r = { method: 'PATCH', url: '/api/members/' + m.id, body: base, ok: 'Saqlandi' };
+        if (newPassIn.value || curPassIn.value) {
+          if (!curPassIn.value) return 'Joriy parolni kiriting';
+          if (newPassIn.value.length < 8) return "Yangi parol kamida 8 belgidan iborat bo'lsin";
+          r.pre = ['POST', '/api/auth/password', { current: curPassIn.value, next: newPassIn.value }];
+        }
+        return r;
+      }
       if (kind === 'frilans') {
         if (!kasbSel.value) return 'Kasbini tanlang';
-        const patch = Object.assign(base, { lavozim: kasbSel.value, tur: 'frilans' });
-        if (mode === 'new') {
-          if (teamRowsAll().some((x) => x.ism === ism)) return 'Bu ism band';
-          teamAdded.push(Object.assign({ _key: ism }, patch));
-        } else applyPatch(m, patch);
-        return null;
+        const body = Object.assign(base, { position: kasbSel.value });
+        return mode === 'new'
+          ? { method: 'POST', url: '/api/members', body: Object.assign(body, { kind: 'freelance' }), ok: "Frilans qo'shildi" }
+          : { method: 'PATCH', url: '/api/members/' + m.id, body, ok: 'Saqlandi' };
       }
       const email = emailIn.value.trim();
       if (!email) return 'Emailni kiriting';
-      const patch = Object.assign(base, {
-        email,
-        lavozim: lavSel.value,
-        rol: rolSel.value,
-        ruxsat: rolSel.value === 'Admin' ? defaultPerm('PM') : tree.get(),
-        loyihalar: lavSel.value === 'Kontent Maker' ? [...projChecks.querySelectorAll('input')].filter((i) => i.checked).map((i) => i.getAttribute('aria-label')).join(', ') : ''
+      if (mode === 'new' && passIn.value.length < 8) return "Boshlang'ich parol kamida 8 belgi bo'lsin";
+      const body = Object.assign(base, {
+        email, color: rang, position: lavSel.value, role: rolSel.value === 'Admin' ? 'admin' : 'member',
+        permissions: tree.get() ? tree.get().split(',').map((x) => x.trim()).filter(Boolean) : [],
+        projects: [...projChecks.querySelectorAll('input')].filter((i) => i.checked).map((i) => i.getAttribute('aria-label'))
       });
-      if (mode === 'new') {
-        if (teamRowsAll().some((x) => x.ism === ism)) return 'Bu ism band';
-        teamAdded.push(Object.assign({ _key: ism }, patch));
-      } else applyPatch(m, patch);
-      return null;
+      if (passIn.value) body.password = passIn.value;
+      return mode === 'new'
+        ? { method: 'POST', url: '/api/members', body: Object.assign(body, { kind: 'account' }), ok: "A'zo qo'shildi" }
+        : { method: 'PATCH', url: '/api/members/' + m.id, body, ok: 'Saqlandi' };
     };
     return sheet;
   };
@@ -1883,7 +1983,7 @@
     return row;
   };
 
-  // Vazifani tahrirlash oynasi (namuna)
+  // Vazifani tahrirlash oynasi
   const buildTaskDetail = (id) => {
     const t = dash.data('tasks');
     const x = t.status === 'ok' ? t.data.find((r) => r.id === id) : null;
@@ -1904,9 +2004,11 @@
     const fg = el('div', 'lx-fgrid');
     const statusSel = mkSelect(TASK_STATUSES, x.holat);
     const noteArea = mkArea(taskNote(x), 4, "Vazifa qanday bajarilgani, havolalar va boshqa kerakli ma'lumotlar");
+    const whoSel = mkSelect(teamNames(), x.kimga);
+    const titleIn = mkInput('text', x.vazifa);
     fg.append(
-      mkField('Kimga', mkSelect(teamNames(), x.kimga)),
-      mkField('Nima vazifa', mkInput('text', x.vazifa), 'lx-wide'),
+      mkField('Kimga', whoSel),
+      mkField('Nima vazifa', titleIn, 'lx-wide'),
       mkField('Muddat (kun)', days),
       mkField('Topshiriladi (avtomatik)', due),
       mkField('Holat', statusSel),
@@ -1919,7 +2021,19 @@
       sheet.querySelector('h3').textContent = 'Vazifa holati va izohi';
       sheet.append(el('p', 'lx-lock', "Siz faqat o'zingizga biriktirilgan vazifaning holatini o'zgartira olasiz."));
     }
-    sheet.append(sheetActions('cancel-task', 'Saqlash', 'save-task'));
+    sheet.append(sheetActions('cancel-task', 'Saqlash', 'save'));
+    sheet._submit = () => {
+      const body = { status: statusSel.value, note: noteArea.value };
+      if (amAdmin()) {
+        if (!titleIn.value.trim()) return 'Vazifa nomini kiriting';
+        Object.assign(body, { assignee: whoSel.value, title: titleIn.value });
+        if (parseInt(days.value, 10) !== Number(x.muddat)) {
+          if (!(parseInt(days.value, 10) >= 1)) return 'Muddatni kiriting';
+          body.durationDays = parseInt(days.value, 10);
+        }
+      }
+      return { method: 'PATCH', url: '/api/tasks/' + id, body, ok: 'Saqlandi' };
+    };
     return sheet;
   };
 
@@ -2027,16 +2141,18 @@
       return f;
     };
     const fg = el('div', 'lx-fgrid');
+    const K = (node, key) => { node.setAttribute('data-f', key); return node; };
     fg.append(
-      req('Mijoz', mkSelect(clients, x.mijoz)),
-      req('Qayerda', mkInput('text', x.qayerda || '', 'Joy nomi')),
-      req('Sana', mkInput('date', x.sana || '', null, { min: '2000-01-01', max: '2099-12-31' })),
-      req('Soat', mkInput('time', x.soat || '')),
-      req('Operator', mkSelect(ops, x.operator)),
-      mkField('Brandface (ixtiyoriy)', mkSelect(bfs, x.brandface || '', '—')),
-      req('Holat', mkSelect(['Rejada', 'Tugatildi', "Bekor bo'ldi", "Ko'chirildi"], x.holat)),
-      mkField("Qo'shimcha (ixtiyoriy)", mkInput('text', x.qoshimcha || '', 'Kerakli narsalar, esdan chiqmasin'))
+      req('Mijoz', K(mkSelect(clients, x.mijoz), 'project')),
+      req('Qayerda', K(mkInput('text', x.qayerda || '', 'Joy nomi'), 'place')),
+      req('Sana', K(mkInput('date', x.sana || '', null, { min: '2000-01-01', max: '2099-12-31' }), 'date')),
+      req('Soat', K(mkInput('time', x.soat || ''), 'time')),
+      req('Operator', K(mkSelect(ops, x.operator), 'operator')),
+      mkField('Brandface (ixtiyoriy)', K(mkSelect(bfs, x.brandface || '', '—'), 'brandface')),
+      req('Holat', K(mkSelect(['Rejada', 'Tugatildi', "Bekor bo'ldi", "Ko'chirildi"], x.holat), 'status')),
+      mkField("Qo'shimcha (ixtiyoriy)", K(mkInput('text', x.qoshimcha || '', 'Kerakli narsalar, esdan chiqmasin'), 'note'))
     );
+    sheet._submit = () => ({ method: 'PATCH', url: '/api/shoots/' + id, body: collectF(sheet), ok: 'Saqlandi' });
     sheet.append(fg);
     if (admin) {
       const a = el('div', 'lx-actions');
@@ -2135,6 +2251,17 @@
   const arxivBox = document.getElementById('arxiv-royxat');
   const cellTxt = (text, attrs) => el('span', null, text == null || text === '' ? '—' : text, attrs);
   const ARXIV = [
+    {
+      id: 'kontentlar', label: 'Kontentlar', prefix: 'content:', src: 'arch_contents', one: 'kontent',
+      hint: "Kontentni «Kontentni o'chirish» tugmasi shu yerga yuboradi, keyin qaytarish mumkin.",
+      grid: 'minmax(9rem,1.4fr) minmax(9rem,1.6fr) minmax(7rem,1fr) minmax(6rem,1fr) minmax(6rem,1fr) 6.5rem',
+      cols: [
+        ['Loyiha', (x) => cellTxt(x.loyiha, mki('arch_contents', 'loyiha', x.id)), 'lx-name'],
+        ['Kontent', (x) => cellTxt(x.nomi, mki('arch_contents', 'nomi', x.id))],
+        ['Tayyorladi', (x) => cellTxt(x.tayyorladi, mki('arch_contents', 'tayyorladi', x.id))],
+        ['Bosqich', (x) => chip(x.bosqich, stageColor(x.bosqich), mki('arch_contents', 'bosqich', x.id))]
+      ]
+    },
     {
       id: 'syomkalar', label: 'Syomkalar', prefix: 'shoot:', src: 'shoots', one: 'syomka',
       hint: "Tugatildi yoki Bekor bo'lgan syomkani Syomkalar bo'limida arxiv ikoni bilan shu yerga ko'chirasiz.",
@@ -2329,6 +2456,42 @@
     task: document.getElementById('task-sheet'),
     shoot: document.getElementById('shoot-sheet')
   };
+  const doSave = (act) => {
+    const sh = act.closest('.lx-sheet');
+    const hint = sh.querySelector('.lx-hint');
+    const setHint = (t, bad) => { hint.textContent = t || ''; hint.classList.toggle('bad', !!bad); };
+    let miss = 0;
+    sh.querySelectorAll('[data-req]').forEach((n) => {
+      const bad = !String(n.value || '').trim();
+      if (bad) miss++;
+      const f = n.closest('.lx-field');
+      if (f) f.classList.toggle('bad', bad);
+    });
+    if (miss) { setHint("Majburiy maydonlar to'ldirilmagan: " + miss + ' ta', true); return; }
+    const r = sh._submit ? sh._submit() : "Bu oynani saqlab bo'lmaydi";
+    if (typeof r === 'string') { setHint(r, true); return; }
+    act.disabled = true;
+    setHint('Saqlanmoqda…');
+    (r.pre ? X5.api(r.pre[0], r.pre[1], r.pre[2]) : Promise.resolve())
+      .then(() => X5.mutate(r.method, r.url, r.body, r.ok, true))
+      .then(() => { closeSheet(); if (sh._after) sh._after(); }, (e) => { setHint(e.message || 'Xatolik', true); })
+      .then(() => { act.disabled = false; });
+  };
+  // Doimiy (markupdagi) oynalar: yangi loyiha, vazifa, syomka
+  sheets.project._submit = () => {
+    const b = collectF(sheets.project);
+    if (!b.name) return 'Loyiha nomini kiriting';
+    return { method: 'POST', url: '/api/projects', body: b, ok: "Loyiha qo'shildi" };
+  };
+  sheets.task._submit = () => {
+    const b = collectF(sheets.task);
+    if (!b.assignee) return 'Kimga ekanini tanlang';
+    if (!b.title) return 'Vazifa nomini kiriting';
+    if (!(parseInt(b.durationDays, 10) >= 1)) return 'Muddatni kiriting';
+    return { method: 'POST', url: '/api/tasks', body: b, ok: "Vazifa qo'shildi" };
+  };
+  sheets.shoot._submit = () => ({ method: 'POST', url: '/api/shoots', body: collectF(sheets.shoot), ok: "Syomka qo'shildi" });
+  Object.keys(sheets).forEach((k) => { sheets[k]._after = () => resetSheet(sheets[k]); });
   tabs.forEach((b) => b.addEventListener('click', () => showPage(b.getAttribute('data-page'), true)));
   backBtn.addEventListener('click', () => {
     const e = navStack.pop();
@@ -2369,48 +2532,10 @@
       else if (a === 'edit-member') {
         const mm = accounts().find((x) => x._key === act.getAttribute('data-key'));
         if (mm) openSheet(buildMemberSheet(mm, amAdmin() ? 'edit' : 'self'));
-      } else if (a === 'save-member') {
-        const sh = act.closest('.lx-sheet');
-        const err = sh._save();
-        const hint = sh.querySelector('.lx-hint');
-        hint.classList.toggle('bad', !!err);
-        if (err) hint.textContent = err;
-        else {
-          closeSheet();
-          redrawAll();
-          toast("Saqlandi (namuna: sahifa yangilansa qaytadi)");
-        }
-      }
-      else if (a === 'save-task') {
-        const sh = act.closest('.lx-sheet');
-        const tid = sh.getAttribute('data-task-sheet');
-        const ta = sh.querySelector('textarea');
-        if (tid && ta) taskNotes.set(tid, ta.value.trim());
-        closeSheet();
-        drawTasks();
-        drawMember();
-        toast("Saqlandi (namuna: sahifa yangilansa qaytadi)");
-      }
+      } else if (/^save(-(member|task|project|newtask|shoot))?$/.test(a)) doSave(act);
       else if (a === 'toggle-task') openSheet(sheets.task);
       else if (a === 'toggle-shoot') openSheet(sheets.shoot);
       else if (/^cancel-/.test(a)) closeSheet();
-      else if (a === 'save-shoot') {
-        const sh = act.closest('.lx-sheet');
-        const hint = sh.querySelector('.lx-hint');
-        let miss = 0;
-        sh.querySelectorAll('[data-req]').forEach((n) => {
-          const bad = !String(n.value || '').trim();
-          if (bad) miss++;
-          const f = n.closest('.lx-field');
-          if (f) f.classList.toggle('bad', bad);
-        });
-        hint.classList.toggle('bad', miss > 0);
-        hint.textContent = miss ? "Majburiy maydonlar to'ldirilmagan: " + miss + ' ta' : "Namuna: ma'lumot hali saqlanmaydi.";
-      }
-      else if (a === 'save-mock') {
-        const hint = act.closest('.lx-sheet').querySelector('.lx-hint');
-        hint.textContent = "Namuna: ma'lumot hali saqlanmaydi.";
-      }
       return;
     }
     const hrf = e.target.closest('[data-href]');
@@ -2432,6 +2557,14 @@
       drawToday();
       drawDetail();
       drawMember();
+      const [cid, plat] = key.split(':');
+      const ct = dash.data('contents');
+      const cc = ct.status === 'ok' ? ct.data.find((x) => x.id === cid) : null;
+      if (cc) {
+        const set = doneSet(cc);
+        if (!cur) set.add(plat); else set.delete(plat);
+        X5.mutate('PATCH', '/api/contents/' + cid, { postedOn: [...set] }).catch(() => X5.reload());
+      }
       return;
     }
     const gt = e.target.closest('[data-goto]');
@@ -2442,20 +2575,13 @@
     }
     const fl = e.target.closest('[data-flag]');
     if (fl) {
-      toggleFlag(fl);
+      flagClick(fl);
       return;
     }
     const rs = e.target.closest('[data-restore]');
     if (rs) {
-      archived.delete(rs.getAttribute('data-restore'));
-      drawTasks();
-      drawShoots();
-      drawMember();
-      drawArxiv();
-      root.querySelectorAll('.lx-toast').forEach((n) => n.remove());
-      const t = el('div', 'lx-toast', 'Qaytarildi');
-      root.append(t);
-      setTimeout(() => t.remove(), 2000);
+      const [kind, rid] = rs.getAttribute('data-restore').split(':');
+      X5.mutate('POST', '/api/archive', { kind, id: rid, restore: true }, 'Qaytarildi').catch(() => {});
       return;
     }
     const at = e.target.closest('[data-atab]');
@@ -2466,16 +2592,8 @@
     }
     const ab = e.target.closest('[data-arch]');
     if (ab) {
-      const nowD = new Date();
-      archived.set(ab.getAttribute('data-arch'), 'Bugun, ' + String(nowD.getHours()).padStart(2, '0') + ':' + String(nowD.getMinutes()).padStart(2, '0'));
-      drawTasks();
-      drawShoots();
-      drawMember();
-      drawArxiv();
-      root.querySelectorAll('.lx-toast').forEach((n) => n.remove());
-      const t = el('div', 'lx-toast', "Arxivlandi — Arxiv sahifasida turadi (namuna: sahifa yangilansa qaytadi)");
-      root.append(t);
-      setTimeout(() => t.remove(), 2200);
+      const [kind, aid] = ab.getAttribute('data-arch').split(':');
+      X5.mutate('POST', '/api/archive', { kind, id: aid }, 'Arxivga yuborildi — Arxiv sahifasida turadi').catch(() => {});
       return;
     }
     const tk = e.target.closest('[data-task]');
@@ -2511,7 +2629,7 @@
     const fl = e.target.closest && e.target.closest('[data-flag]');
     if (fl && (e.key === 'Enter' || e.key === ' ')) {
       e.preventDefault();
-      toggleFlag(fl);
+      flagClick(fl);
       return;
     }
     if (e.key !== 'Enter') return;
@@ -2652,6 +2770,11 @@
   dash.onData(redrawAll);
   window.X5app = {
     setMe: (n) => { view.me = n; },
+    clearOverrides: () => {
+      [flagOv, postedOv, teamEdits].forEach((o) => Object.keys(o).forEach((k) => delete o[k]));
+      taskNotes.clear();
+      teamAdded.length = 0;
+    },
     setArchived: (o) => { archived.clear(); Object.keys(o || {}).forEach((k) => archived.set(k, o[k])); },
     showPage,
     firstPage,

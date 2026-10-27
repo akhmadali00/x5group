@@ -54,6 +54,7 @@
       Object.keys(p || {}).forEach(function (k) { if (p[k] == null || p[k] === '') q.delete(k); else q.set(k, p[k]); });
       var s = q.toString();
       try { history.replaceState(null, '', location.pathname + (s ? '?' + s : '') + location.hash); } catch (e) { /* ixtiyoriy */ }
+      notify();
     },
     setLink: function (id) {
       try { history.replaceState(null, '', location.pathname + location.search + '#' + id); } catch (e) { /* ixtiyoriy */ }
