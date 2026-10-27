@@ -46,14 +46,8 @@ export type Datasets = {
 
 export type Loaded = { datasets: Datasets; archived: Record<string, string>; syncAt: string };
 
-/** Hamma so'rovlar bitta ulanishda ketma-ket yuboriladi (pipeline): uzoq masofadagi bazada ham bitta aylanish vaqti ketadi. */
 export async function loadDatasets(me: Me): Promise<Loaded> {
-  const conn = await db().reserve();
-  try {
-    return await loadDatasetsOn(conn as unknown as Sql, me);
-  } finally {
-    conn.release();
-  }
+  return loadDatasetsOn(db(), me);
 }
 
 async function loadDatasetsOn(sql: Sql, me: Me): Promise<Loaded> {

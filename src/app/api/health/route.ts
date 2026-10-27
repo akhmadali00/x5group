@@ -23,8 +23,7 @@ export async function GET() {
   out.five_parallel_ms = await timed(() => Promise.all([1, 2, 3, 4, 5].map(() => sql`select 1`)));
   out.tables_ms = await timed(() => sql`select (select count(*) from members), (select count(*) from contents), (select count(*) from audit_log)`);
   out.data_load_ms = await timed(async () => {
-    const c = await sql.reserve();
-    try { await Promise.all([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(() => c`select 1`)); } finally { c.release(); }
+    await Promise.all([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14].map(() => sql`select 1`));
   });
   return NextResponse.json(out, { headers: { 'Cache-Control': 'no-store' } });
 }
