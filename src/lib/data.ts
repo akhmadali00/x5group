@@ -22,6 +22,7 @@ function archivedLabel(at: Date | string): string {
   return `${dd}.${m}.${y}, ${hm}`;
 }
 
+const addDaysIso = (iso: string, n: number) => { const d = new Date(`${iso}T00:00:00Z`); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
 const b01 = (v: unknown) => (v ? 1 : 0);
 const list = (a: unknown) => (Array.isArray(a) ? a.join(', ') : '');
 const orEmpty = (v: unknown) => (v === null || v === undefined ? '' : v);
@@ -38,6 +39,7 @@ export type Datasets = {
   campaigns: R[];
   daily: R[];
   arch_contents: R[];
+  efficiency: R[];
   audit: R[];
   backups: R[];
 };
@@ -262,6 +264,20 @@ export async function loadDatasets(me: Me): Promise<Loaded> {
         .map((d) => ({ id: `${d.project_id}-${d.day}`, mijoz: pName.get(d.project_id) || '', sana: d.day, lid: d.leads, sarf: d.spend, toliq: b01(d.complete) }))
     : [];
 
+  // ---- samaradorlik (oxirgi 30 kun): Admin hammani, boshqalar faqat o'zini ko'radi ----
+  const since = addDaysIso(tashkentDate(), -29);
+  const effRows = await sql<R[]>`
+    select m.name,
+      (select count(*) from tasks t where t.assignee_id = m.id and t.archived_at is null and t.status in ('Tayyor','Tugatildi') and (t.done_at at time zone 'Asia/Tashkent')::date >= ${since})::int as done,
+      (select count(*) from tasks t where t.assignee_id = m.id and t.archived_at is null and t.status in ('Tayyor','Tugatildi') and (t.done_at at time zone 'Asia/Tashkent')::date >= ${since} and (t.done_at at time zone 'Asia/Tashkent')::date <= t.due_on)::int as ontime,
+      (select count(*) from tasks t where t.assignee_id = m.id and t.archived_at is null and t.status in ('Boshlanmagan','Jarayonda') and t.due_on < ${tashkentDate()})::int as overdue,
+      (select coalesce(round(avg(((t.done_at at time zone 'Asia/Tashkent')::date - t.assigned_on))::numeric, 1), 0) from tasks t where t.assignee_id = m.id and t.archived_at is null and t.status in ('Tayyor','Tugatildi') and (t.done_at at time zone 'Asia/Tashkent')::date >= ${since}) as avg_days,
+      (select count(*) from contents c where c.author_id = m.id and c.archived_at is null and (c.created_at at time zone 'Asia/Tashkent')::date >= ${since})::int as created,
+      (select count(*) from contents c where c.author_id = m.id and c.archived_at is null and c.stage = 'Post Joylandi' and (c.updated_at at time zone 'Asia/Tashkent')::date >= ${since})::int as posted,
+      (select count(*) from shoots s where (s.operator_id = m.id or s.brandface_id = m.id) and s.archived_at is null and s.status = 'Tugatildi' and s.shoot_date >= ${since})::int as shoots
+    from members m where m.active ${admin ? sql`` : sql`and m.id = ${me.id}`} order by m.name`;
+  const efficiencyDs = effRows.map((r) => ({ ism: r.name, bajarildi: r.done, vaqtida: r.ontime, kechikkan: r.overdue, ortacha: Number(r.avg_days), kontent: r.created, joylangan: r.posted, syomka: r.shoots }));
+
   const [syncRow] = await sql<{ value: { at?: string } }[]>`select value from settings where key = 'sync.last'`;
   return {
     datasets: {
@@ -275,6 +291,7 @@ export async function loadDatasets(me: Me): Promise<Loaded> {
       campaigns: campaignsDs,
       daily: dailyDs,
       arch_contents: archContentsDs,
+      efficiency: efficiencyDs,
       backups: backupRows.map((b) => ({ id: String(b.id), vaqt: archivedLabel(b.created_at), tur: b.kind, hajm: Object.values(b.row_counts as Record<string, number>).reduce((a, x) => a + x, 0) })),
       audit: auditRows.map((a) => ({ id: String(a.id), kim: a.actor_name || 'Tizim', amal: a.action, tur: a.entity, mazmun: a.summary, vaqt: archivedLabel(a.at), qaytarilgan: b01(a.reverted_at), qaytarsa: b01(a.can_revert) }))
     },

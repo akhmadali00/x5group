@@ -1909,7 +1909,7 @@
     memberBox.replaceChildren();
     const name = dash.params().azo;
     if (!name) return;
-    const sets = ['team', 'member_stats', 'contents'].map((id) => dash.data(id));
+    const sets = ['team', 'member_stats', 'contents', 'efficiency'].map((id) => dash.data(id));
     if (sets.some((d) => d.status === 'loading')) {
       skeleton(memberBox);
       return;
@@ -1918,7 +1918,7 @@
       memberBox.append(el('div', 'lx-fail', 'Failed to load'));
       return;
     }
-    const [t, s, ct] = sets;
+    const [t, s, ct, ef] = sets;
     const m = accounts().find((x) => x._key === name);
     if (!m) {
       memberBox.append(el('div', 'lx-empty', "A'zo topilmadi."));
@@ -1955,6 +1955,22 @@
     ptile.append(el('div', 'lx-lab', 'Loyihalar'), el('div', 'lx-names', pl.length ? pl.join(', ') : '—'));
     tiles.append(ptile);
     memberBox.append(tiles);
+
+    // Samaradorlik: oxirgi 30 kun
+    const e = ef.data.find((r) => r.ism === name);
+    if (e) {
+      const es = el('section', 'lx-board');
+      es.append(el('h2', null, 'Samaradorlik · oxirgi 30 kun'));
+      const et = el('section', 'lx-tiles');
+      const pct = e.bajarildi ? Math.round((e.vaqtida / e.bajarildi) * 100) + '%' : '—';
+      [['Bajarilgan vazifa', fmtInt(e.bajarildi)], ["O'z vaqtida", pct], ['Kechikkan (hozir)', fmtInt(e.kechikkan)], ["O'rtacha muddat", e.bajarildi ? e.ortacha + ' kun' : '—'], ['Yangi kontent', fmtInt(e.kontent)], ['Joylangan', fmtInt(e.joylangan)], ['Syomka', fmtInt(e.syomka)]].forEach(([label, val]) => {
+        const tl = el('div', 'lx-tile');
+        tl.append(el('div', 'lx-lab', label), el('div', 'lx-big' + (label === 'Kechikkan (hozir)' && e.kechikkan ? ' n-gold' : ''), val));
+        et.append(tl);
+      });
+      es.append(et);
+      memberBox.append(es);
+    }
 
     // Ruxsatlar (faqat Admin ko'radi)
     if (amAdmin()) {
