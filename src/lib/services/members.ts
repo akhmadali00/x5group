@@ -118,3 +118,74 @@ export async function updateMember(me: Me, id: string, input: unknown) {
   });
   return { ok: true };
 }
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Admin tekshiruvlari: o'zini va oxirgi faol Adminni faolsizlantirib / o'chirib bo'lmaydi. */
+async function guardRemoval(me: Me, tx: ReturnType<typeof db>, m: { id: string; role: string; active: boolean }, what: string) {
+  if (m.id === me.id) throw bad(`O'zingizni ${what} bo'lmaydi`);
+  if (m.role === 'admin' && m.active) {
+    const [{ n }] = await tx<{ n: number }[]>`select count(*)::int n from members where role = 'admin' and active and id <> ${m.id}`;
+    if (n === 0) throw bad(`Oxirgi Adminni ${what} bo'lmaydi`);
+  }
+}
+
+/**
+ * A'zoni faolsizlantirish (active=false) yoki qayta faollashtirish.
+ * Faolsizlantirilganda: kira olmaydi, sessiyalari yopiladi, Telegram bog'lanishi uziladi, tugallanmagan vazifalari arxivga o'tadi.
+ * Kontent, syomka va tarixdagi nomi saqlanadi.
+ */
+export async function setMemberActive(me: Me, id: string, active: boolean) {
+  if (!isAdmin(me)) throw forbidden("A'zoni faqat Admin boshqaradi");
+  if (!UUID.test(id)) throw notFound("A'zo topilmadi");
+  const sql = db();
+  return sql.begin(async (tx) => {
+    const [before] = await tx`select * from members where id = ${id} for update`;
+    if (!before) throw notFound("A'zo topilmadi");
+    if (before.active === active) return { ok: true, archivedTasks: 0 };
+    let archivedTasks = 0;
+    if (!active) {
+      await guardRemoval(me, tx as never, before as never, 'faolsizlantirib');
+      await tx`update members set active = false, telegram_chat_id = null, telegram_status = 'none' where id = ${id}`;
+      await tx`delete from sessions where member_id = ${id}`;
+      await tx`delete from link_codes where member_id = ${id}`;
+      const r = await tx`update tasks set archived_at = now() where assignee_id = ${id} and archived_at is null`;
+      archivedTasks = r.count;
+    } else {
+      await tx`update members set active = true where id = ${id}`;
+    }
+    const [row] = await tx`select * from members where id = ${id}`;
+    await audit(tx as never, {
+      actor: me, action: active ? 'restore' : 'delete', entity: 'member', entityId: id,
+      summary: active ? `A'zo qayta faollashtirildi: ${row.name}` : `A'zo faolsizlantirildi: ${row.name}${archivedTasks ? ` (${archivedTasks} ta vazifasi arxivga o'tdi)` : ''}`,
+      before: snapshot(before), after: snapshot(row)
+    });
+    return { ok: true, archivedTasks };
+  });
+}
+
+/**
+ * A'zoni butunlay o'chirish (qaytarib bo'lmaydi; faqat zaxiradan tiklanadi).
+ * Uning vazifalari ham o'chadi; kontent va syomkalarda ismi bo'shab qoladi (kontent/syomkaning o'zi saqlanadi).
+ */
+export async function deleteMember(me: Me, id: string) {
+  if (!isAdmin(me)) throw forbidden("A'zoni faqat Admin o'chiradi");
+  if (!UUID.test(id)) throw notFound("A'zo topilmadi");
+  const sql = db();
+  return sql.begin(async (tx) => {
+    const [before] = await tx`select * from members where id = ${id} for update`;
+    if (!before) throw notFound("A'zo topilmadi");
+    await guardRemoval(me, tx as never, before as never, "o'chirib");
+    const [{ tasks, contents, shoots }] = await tx<{ tasks: number; contents: number; shoots: number }[]>`
+      select (select count(*) from tasks where assignee_id = ${id})::int as tasks,
+             (select count(*) from contents where author_id = ${id} or editor_id = ${id})::int as contents,
+             (select count(*) from shoots where operator_id = ${id} or brandface_id = ${id})::int as shoots`;
+    await tx`delete from members where id = ${id}`; // sessions, link_codes, project_pms, member_projects, tasks — cascade; boshqalar set null
+    await audit(tx as never, {
+      actor: me, action: 'delete', entity: 'member', entityId: null,
+      summary: `A'zo butunlay o'chirildi: ${before.name} (${tasks} vazifa o'chdi; ${contents} kontent, ${shoots} syomkada ismi bo'shadi)`,
+      before: snapshot(before)
+    });
+    return { ok: true, tasks, contents, shoots };
+  });
+}

@@ -39,6 +39,8 @@ export type Datasets = {
   campaigns: R[];
   daily: R[];
   arch_contents: R[];
+  arch_projects: R[];
+  arch_members: R[];
   efficiency: R[];
   audit: R[];
   backups: R[];
@@ -54,7 +56,7 @@ async function loadDatasetsOn(sql: Sql, me: Me): Promise<Loaded> {
   const admin = isAdmin(me);
   const since = addDaysIso(tashkentDate(), -29);
 
-  const [members, projects, pms, mps, contents, tasks, shoots, campaigns, daily, archContents, auditRows, backupRows, effRows, syncRows] = await limitedAll([
+  const [members, projects, pms, mps, contents, tasks, shoots, campaigns, daily, archContents, auditRows, backupRows, effRows, syncRows, archProjects, inactive] = await limitedAll([
     sql<R[]>`select * from members where active order by created_at, name`,
     sql<R[]>`select * from projects where archived_at is null order by created_at, name`,
     sql<R[]>`select project_id, member_id from project_pms`,
@@ -77,18 +79,26 @@ async function loadDatasetsOn(sql: Sql, me: Me): Promise<Loaded> {
       (select count(*) from contents c where c.author_id = m.id and c.archived_at is null and c.stage = 'Post Joylandi' and (c.updated_at at time zone 'Asia/Tashkent')::date >= ${since})::int as posted,
       (select count(*) from shoots s where (s.operator_id = m.id or s.brandface_id = m.id) and s.archived_at is null and s.status = 'Tugatildi' and s.shoot_date >= ${since})::int as shoots
     from members m where m.active ${admin ? sql`` : sql`and m.id = ${me.id}`} order by m.name`,
-    sql<{ value: { at?: string } }[]>`select value from settings where key = 'sync.last'`
+    sql<{ value: { at?: string } }[]>`select value from settings where key = 'sync.last'`,
+    admin
+      ? sql<R[]>`select p.id, p.name, p.status, p.archived_at,
+          (select count(*) from contents c where c.project_id = p.id)::int as contents,
+          (select count(*) from shoots s where s.project_id = p.id)::int as shoots
+        from projects p where p.archived_at is not null order by p.archived_at desc`
+      : Promise.resolve([] as R[]),
+    sql<R[]>`select id, name, kind, role, position, created_at from members where not active order by name`
   ] as const);
   const syncRow = syncRows[0];
 
   const mName = new Map<string, string>(members.map((m) => [m.id, m.name]));
+  const mNameAll = new Map<string, string>([...mName, ...inactive.map((m) => [m.id, m.name] as [string, string])]); // nofaol a'zolar ismi tarixda ko'rinadi
   const visibleProjects = admin ? projects : projects.filter((p) => me.projectIds.has(p.id));
   const pName = new Map<string, string>(projects.map((p) => [p.id, p.name]));
   const visibleIds = new Set(visibleProjects.map((p) => p.id));
 
   // ---- team ----
   const pmsByProject = new Map<string, string[]>();
-  for (const x of pms) pmsByProject.set(x.project_id, [...(pmsByProject.get(x.project_id) || []), mName.get(x.member_id) || '']);
+  for (const x of pms) pmsByProject.set(x.project_id, [...(pmsByProject.get(x.project_id) || []), ...(mName.get(x.member_id) ? [mName.get(x.member_id)!] : [])]);
   const projByMember = new Map<string, Set<string>>();
   for (const x of mps) (projByMember.get(x.member_id) || projByMember.set(x.member_id, new Set()).get(x.member_id)!).add(x.project_id);
   for (const x of pms) (projByMember.get(x.member_id) || projByMember.set(x.member_id, new Set()).get(x.member_id)!).add(x.project_id);
@@ -184,8 +194,8 @@ async function loadDatasetsOn(sql: Sql, me: Me): Promise<Loaded> {
       loyiha: pName.get(c.project_id) || '',
       tartib: c.position,
       nomi: c.title,
-      tayyorladi: mName.get(c.author_id) || '',
-      montajor: mName.get(c.editor_id) || '',
+      tayyorladi: mNameAll.get(c.author_id) || '',
+      montajor: mNameAll.get(c.editor_id) || '',
       bosqich: c.stage,
       rekda: b01(c.rekda),
       target: b01(c.target),
@@ -217,11 +227,21 @@ async function loadDatasetsOn(sql: Sql, me: Me): Promise<Loaded> {
     archived['content:' + c.id] = archivedLabel(c.archived_at);
     return contentRow(c);
   });
+  const archProjectsDs = archProjects.map((p) => {
+    archived['project:' + p.id] = archivedLabel(p.archived_at);
+    return { id: p.id, nomi: p.name, holat: p.status, kontent: p.contents, syomka: p.shoots };
+  });
+  const archMembersDs = admin
+    ? inactive.map((m) => {
+        archived['member:' + m.id] = 'Faolsiz';
+        return { id: m.id, ism: m.name, lavozim: orEmpty(m.position), rol: m.role === 'admin' ? 'Admin' : "A'zo", tur: m.kind === 'freelance' ? 'Frilans' : 'Akkaunt' };
+      })
+    : [];
   const tasksDs = tasks.map((t) => {
     if (t.archived_at) archived['task:' + t.id] = archivedLabel(t.archived_at);
     return {
       id: t.id,
-      kimga: mName.get(t.assignee_id) || '',
+      kimga: mNameAll.get(t.assignee_id) || '',
       vazifa: t.title,
       izoh: orEmpty(t.note),
       muddat: t.duration_days,
@@ -232,7 +252,7 @@ async function loadDatasetsOn(sql: Sql, me: Me): Promise<Loaded> {
 
   // ---- syomkalar ----
   const shootsDs = shoots
-    .filter((s) => admin || visibleIds.has(s.project_id) || s.operator_id === me.id || s.brandface_id === me.id)
+    .filter((s) => pName.has(s.project_id) && (admin || visibleIds.has(s.project_id) || s.operator_id === me.id || s.brandface_id === me.id)) // arxivlangan loyiha syomkalari yashirin
     .map((s) => {
       if (s.archived_at) archived['shoot:' + s.id] = archivedLabel(s.archived_at);
       return {
@@ -241,8 +261,8 @@ async function loadDatasetsOn(sql: Sql, me: Me): Promise<Loaded> {
         qayerda: s.place,
         sana: s.shoot_date,
         soat: s.shoot_time,
-        operator: mName.get(s.operator_id) || '',
-        brandface: mName.get(s.brandface_id) || '',
+        operator: mNameAll.get(s.operator_id) || '',
+        brandface: mNameAll.get(s.brandface_id) || '',
         holat: s.status,
         qoshimcha: orEmpty(s.note)
       };
@@ -295,6 +315,8 @@ async function loadDatasetsOn(sql: Sql, me: Me): Promise<Loaded> {
       campaigns: campaignsDs,
       daily: dailyDs,
       arch_contents: archContentsDs,
+      arch_projects: archProjectsDs,
+      arch_members: archMembersDs,
       efficiency: efficiencyDs,
       backups: backupRows.map((b) => ({ id: String(b.id), vaqt: archivedLabel(b.created_at), tur: b.kind, hajm: Object.values(b.row_counts as Record<string, number>).reduce((a, x) => a + x, 0) })),
       audit: auditRows.map((a) => ({ id: String(a.id), kim: a.actor_name || 'Tizim', amal: a.action, tur: a.entity, mazmun: a.summary, vaqt: archivedLabel(a.at), qaytarilgan: b01(a.reverted_at), qaytarsa: b01(a.can_revert) }))

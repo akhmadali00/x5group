@@ -59,13 +59,13 @@ export async function dayDigest(sql: Sql, who: Person, date: string, title = '�
 
   const shoots = await sql<R[]>`
     select s.*, p.name as project from shoots s join projects p on p.id = s.project_id
-    where s.archived_at is null and s.status = 'Rejada' and s.shoot_date = ${date} order by s.shoot_time`;
+    where s.archived_at is null and p.archived_at is null and s.status = 'Rejada' and s.shoot_date = ${date} order by s.shoot_time`;
   const mine = shoots.filter((s) => admin || s.operator_id === who.id || s.brandface_id === who.id || (pms.get(s.project_id) || []).includes(who.id));
   if (mine.length) parts.push('🎬 <b>Bugungi syomka</b>\n' + mine.map((s) => `• ${esc(s.shoot_time)} — ${esc(s.project)}, ${esc(s.place)}`).join('\n'));
 
   const posts = await sql<R[]>`
     select c.*, p.name as project from contents c join projects p on p.id = c.project_id
-    where c.archived_at is null and c.stage = 'Tasdiqlandi' and c.post_date = ${date} order by c.post_time nulls last`;
+    where c.archived_at is null and p.archived_at is null and c.stage = 'Tasdiqlandi' and c.post_date = ${date} order by c.post_time nulls last`;
   const myPosts = posts.filter((c) => admin || c.author_id === who.id || (pms.get(c.project_id) || []).includes(who.id));
   if (myPosts.length) parts.push('📣 <b>Bugun joylanadi</b>\n' + myPosts.map((c) => `• ${esc(c.post_time || '—')} — ${esc(c.project)}: ${esc(c.title)} (${(c.platforms as string[]).map((x) => PLAT_NAME[x] || x).join(', ') || '—'})`).join('\n'));
 
@@ -77,7 +77,7 @@ async function eveningShoots(sql: Sql, t: Local) {
   const tomorrow = addDays(t.date, 1);
   const shoots = await sql<R[]>`
     select s.*, p.name as project from shoots s join projects p on p.id = s.project_id
-    where s.archived_at is null and s.status = 'Rejada' and s.shoot_date = ${tomorrow} order by s.shoot_time`;
+    where s.archived_at is null and p.archived_at is null and s.status = 'Rejada' and s.shoot_date = ${tomorrow} order by s.shoot_time`;
   if (!shoots.length) return;
   const pms = await pmMap(sql);
   const ppl = await people(sql);
@@ -100,7 +100,7 @@ async function morning(sql: Sql, t: Local) {
 async function postReminders(sql: Sql, t: Local) {
   const posts = await sql<R[]>`
     select c.*, p.name as project from contents c join projects p on p.id = c.project_id
-    where c.archived_at is null and c.stage = 'Tasdiqlandi' and c.post_date = ${t.date} and c.post_time is not null`;
+    where c.archived_at is null and p.archived_at is null and c.stage = 'Tasdiqlandi' and c.post_date = ${t.date} and c.post_time is not null`;
   if (!posts.length) return;
   const pms = await pmMap(sql);
   const ppl = new Map((await people(sql)).map((p) => [p.id, p]));
@@ -134,7 +134,7 @@ async function periodReport(sql: Sql, from: string, to: string, label: string): 
            count(*) filter (where status in ('Boshlanmagan','Jarayonda') and due_on < ${to}) as overdue
     from tasks where archived_at is null`;
   const [sh] = await sql<R[]>`select count(*) filter (where status = 'Tugatildi') as done, count(*) filter (where status like 'Bekor%') as cancelled from shoots where archived_at is null and shoot_date between ${from} and ${to}`;
-  const posted = await sql<R[]>`select p.name, count(*)::int as n from contents c join projects p on p.id = c.project_id where c.archived_at is null and c.stage = 'Post Joylandi' and (c.updated_at at time zone 'Asia/Tashkent')::date between ${from} and ${to} group by p.name order by n desc`;
+  const posted = await sql<R[]>`select p.name, count(*)::int as n from contents c join projects p on p.id = c.project_id where c.archived_at is null and p.archived_at is null and c.stage = 'Post Joylandi' and (c.updated_at at time zone 'Asia/Tashkent')::date between ${from} and ${to} group by p.name order by n desc`;
   const per = await sql<R[]>`
     select m.name, count(*)::int as done, count(*) filter (where (t.done_at at time zone 'Asia/Tashkent')::date <= t.due_on)::int as ontime
     from tasks t join members m on m.id = t.assignee_id

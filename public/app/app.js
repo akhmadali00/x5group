@@ -879,6 +879,22 @@
     return a;
   };
 
+  // Xavfli amal tugmasi: birinchi bosishda "Tasdiqlang", 5 soniya ichida yana bosilsa bajariladi
+  const dangerBtn = (text, armedText, run) => {
+    const b = el('button', 'lx-btn danger', text, { type: 'button' });
+    b.addEventListener('click', () => {
+      if (!b.hasAttribute('data-armed')) {
+        b.setAttribute('data-armed', '1');
+        b.textContent = armedText;
+        setTimeout(() => { if (b.isConnected) { b.removeAttribute('data-armed'); b.textContent = text; } }, 5000);
+        return;
+      }
+      b.disabled = true;
+      run().catch(() => { b.disabled = false; });
+    });
+    return b;
+  };
+
   // Kontent formasi: yangi kontent va mavjud kontent ma'lumotlari
   const stageLocked = (st) => ((st === 'Tasdiqlandi' || st === 'Ijobiy') && !(amAdmin() || isPM()));
   const mkStageSelect = (current) => {
@@ -1115,7 +1131,19 @@
       mkField('Reklama akkaunti ID (act_...) yoki havola', mkInput('text', p.akkaunt || '', 'act_1234567890'), null, 'adAccount'),
       mkField('Business portfolio nomi (ixtiyoriy)', mkInput('text', p.portfolio || '', 'Masalan, Mijoz Portfolio'), null, 'portfolio')
     );
-    sheet.append(fg, sheetActions('cancel-content', 'Saqlash'));
+    sheet.append(fg);
+    if (p.id) {
+      const dz = el('div', 'lx-dz');
+      dz.append(
+        el('label', null, 'Loyihani arxivlash'),
+        el('p', 'lx-hint2', "Arxivlangan loyiha ro'yxatlardan, eslatmalar va reklama yangilanishidan yashiriladi; kontent va syomkalari saqlanadi. Arxiv → Loyihalar bo'limidan qaytarish yoki butunlay o'chirish mumkin.")
+      );
+      const row = el('div', 'lx-dzrow');
+      row.append(dangerBtn('Arxivga yuborish', 'Tasdiqlang', () => X5.mutate('POST', '/api/archive', { kind: 'project', id: p.id }, 'Loyiha arxivga yuborildi').then(() => { closeSheet(); showPage('loyihalar', true); })));
+      dz.append(row);
+      sheet.append(dz);
+    }
+    sheet.append(sheetActions('cancel-content', 'Saqlash'));
     sheet._submit = () => {
       if (!p.id) return 'Loyiha topilmadi';
       return { method: 'PATCH', url: '/api/projects/' + p.id, body: collectF(sheet), ok: 'Loyiha saqlandi' };
@@ -1866,6 +1894,21 @@
     fg.append(fName, fEmail, fPass, fKasb, fPhone, fTg, fRang, fLav, fRol, fProj, fPerm, fCur, fNew, f2fa, fTgBot);
     sheet.append(fg);
     if (mode === 'self') sheet.append(el('p', 'lx-lock', "Boshqa ma'lumotlarni (lavozim, rol, ruxsatlar) faqat Admin o'zgartiradi."));
+    if (mode === 'edit' && m && m.id && m._key !== meRow()._key) {
+      const dz = el('div', 'lx-dz');
+      dz.append(
+        el('label', null, "Faolsizlantirish yoki o'chirish"),
+        el('p', 'lx-hint2', "Faolsizlantirilgan a'zo tizimga kira olmaydi va botdan xabar olmaydi; kontent va tarixi saqlanadi, tugallanmagan vazifalari arxivga o'tadi. Keyin Arxiv → A'zolar bo'limidan qayta faollashtirish mumkin. Butunlay o'chirishda a'zoning vazifalari ham o'chadi va qaytarib bo'lmaydi (faqat zaxiradan tiklanadi).")
+      );
+      const row = el('div', 'lx-dzrow');
+      const after = () => { closeSheet(); showPage('jamoa', true); };
+      row.append(
+        dangerBtn('Faolsizlantirish', 'Tasdiqlang', () => X5.mutate('POST', '/api/members/' + m.id + '/active', { active: false }, "A'zo faolsizlantirildi").then(after)),
+        dangerBtn("Butunlay o'chirish", "Ha, butunlay o'chirilsin", () => X5.mutate('DELETE', '/api/members/' + m.id, undefined, "A'zo butunlay o'chirildi").then(after))
+      );
+      dz.append(row);
+      sheet.append(dz);
+    }
     sheet.append(sheetActions('cancel-member', mode === 'new' ? "Qo'shish" : 'Saqlash', 'save'));
     apply();
     sheet._submit = () => {
@@ -2384,7 +2427,7 @@
     {
       id: 'kontentlar', label: 'Kontentlar', prefix: 'content:', src: 'arch_contents', one: 'kontent',
       hint: "Kontentni «Kontentni o'chirish» tugmasi shu yerga yuboradi, keyin qaytarish mumkin.",
-      grid: 'minmax(9rem,1.4fr) minmax(9rem,1.6fr) minmax(7rem,1fr) minmax(6rem,1fr) minmax(6rem,1fr) 6.5rem',
+      grid: 'minmax(9rem,1.4fr) minmax(9rem,1.6fr) minmax(7rem,1fr) minmax(6rem,1fr) minmax(6rem,1fr) 14rem',
       cols: [
         ['Loyiha', (x) => cellTxt(x.loyiha, mki('arch_contents', 'loyiha', x.id)), 'lx-name'],
         ['Kontent', (x) => cellTxt(x.nomi, mki('arch_contents', 'nomi', x.id))],
@@ -2395,7 +2438,7 @@
     {
       id: 'syomkalar', label: 'Syomkalar', prefix: 'shoot:', src: 'shoots', one: 'syomka',
       hint: "Tugatildi yoki Bekor bo'lgan syomkani Syomkalar bo'limida arxiv ikoni bilan shu yerga ko'chirasiz.",
-      grid: 'minmax(9rem,1.5fr) minmax(7rem,1.3fr) minmax(8rem,1.2fr) minmax(5.5rem,1fr) minmax(6.5rem,1fr) minmax(6rem,1fr) 6.5rem',
+      grid: 'minmax(9rem,1.5fr) minmax(7rem,1.3fr) minmax(8rem,1.2fr) minmax(5.5rem,1fr) minmax(6.5rem,1fr) minmax(6rem,1fr) 14rem',
       cols: [
         ['Mijoz', (x) => cellTxt(x.mijoz, mki('shoots', 'mijoz', x.id)), 'lx-name'],
         ['Qayerda', (x) => cellTxt(x.qayerda, mki('shoots', 'qayerda', x.id))],
@@ -2405,9 +2448,34 @@
       ]
     },
     {
+      id: 'loyihalar', label: 'Loyihalar', prefix: 'project:', src: 'arch_projects', one: 'loyiha',
+      hint: "Loyiha tahrirlash oynasidagi «Arxivga yuborish» tugmasi shu yerga ko'chiradi; kontent va syomkalari saqlanadi.",
+      grid: 'minmax(10rem,2fr) minmax(6rem,1fr) minmax(6rem,1fr) minmax(6rem,1fr) minmax(6rem,1fr) 14rem',
+      cols: [
+        ['Loyiha', (x) => cellTxt(x.nomi), 'lx-name'],
+        ['Holat', (x) => cellTxt(x.holat)],
+        ['Kontent', (x) => cellTxt(x.kontent)],
+        ['Syomka', (x) => cellTxt(x.syomka)]
+      ],
+      warn: (x) => "«" + x.nomi + "» loyihasi bilan birga uning " + x.kontent + " ta kontenti, " + x.syomka + " ta syomkasi, kampaniyalari va natijalari ham o'chadi."
+    },
+    {
+      id: 'azolar', label: "A'zolar", prefix: 'member:', src: 'arch_members', one: "faolsiz a'zo",
+      hint: "Jamoa → a'zo → Tahrirlash oynasidagi «Faolsizlantirish» tugmasi shu yerga ko'chiradi; qayta faollashtirish mumkin.",
+      grid: 'minmax(10rem,2fr) minmax(6rem,1fr) minmax(6rem,1fr) minmax(6rem,1fr) minmax(6rem,1fr) 14rem',
+      cols: [
+        ['Ism', (x) => cellTxt(x.ism), 'lx-name'],
+        ['Lavozim', (x) => cellTxt(x.lavozim)],
+        ['Rol', (x) => cellTxt(x.rol)],
+        ['Tur', (x) => cellTxt(x.tur)]
+      ],
+      warn: (x) => "«" + x.ism + "» butunlay o'chadi, uning vazifalari ham o'chadi; kontent va syomkalarda ismi bo'shab qoladi.",
+      reactivate: true
+    },
+    {
       id: 'vazifalar', label: 'Vazifalar', prefix: 'task:', src: 'tasks', one: 'vazifa',
       hint: "Tugatildi holatidagi vazifani Vazifalar bo'limida arxiv ikoni bilan shu yerga ko'chirasiz.",
-      grid: 'minmax(10rem,2fr) minmax(6rem,1fr) minmax(7rem,1fr) minmax(6rem,1fr) minmax(6rem,1fr) 6.5rem',
+      grid: 'minmax(10rem,2fr) minmax(6rem,1fr) minmax(7rem,1fr) minmax(6rem,1fr) minmax(6rem,1fr) 14rem',
       cols: [
         ['Nima vazifa', (x) => cellTxt(x.vazifa, mki('tasks', 'vazifa', x.id)), 'lx-name'],
         ['Kimga', (x) => cellTxt(x.kimga, mki('tasks', 'kimga', x.id))],
@@ -2532,7 +2600,7 @@
       rows.forEach((x) => {
         const row = el('div', 'lx-arow');
         row.style.gridTemplateColumns = grid;
-        [[x.vaqt, 'Qachon'], [x.kim, 'Kim'], [ACT[x.amal] || x.amal, 'Amal'], [x.mazmun, "O'zgarish"]].forEach(([t, l]) => row.append(el('div', 'lx-c', t, { 'data-label': l })));
+        [[x.vaqt, 'Qachon'], [x.kim, 'Kim'], [/butunlay o'chirildi/i.test(x.mazmun) ? "O'chirildi" : (ACT[x.amal] || x.amal), 'Amal'], [x.mazmun, "O'zgarish"]].forEach(([t, l]) => row.append(el('div', 'lx-c', t, { 'data-label': l })));
         const rc = el('div', 'lx-c lx-arest');
         if (Number(x.qaytarsa)) rc.append(el('button', 'lx-btn', 'Qaytarish', { type: 'button', 'data-revert': x.id }));
         else if (Number(x.qaytarilgan)) rc.append(el('span', 'lx-awhen', 'Qaytarilgan'));
@@ -2565,7 +2633,10 @@
       });
       row.append(el('div', 'lx-c lx-awhen', archived.get(sec.prefix + x.id), { 'data-label': 'Arxivlangan' }));
       const rc = el('div', 'lx-c lx-arest');
-      rc.append(el('button', 'lx-btn', 'Qaytarish', { type: 'button', 'data-restore': sec.prefix + x.id }));
+      rc.append(el('button', 'lx-btn', sec.reactivate ? 'Faollashtirish' : 'Qaytarish', { type: 'button', 'data-restore': sec.prefix + x.id }));
+      const delBtn = el('button', 'lx-btn danger', "Butunlay o'chirish", { type: 'button', 'data-forever': sec.prefix + x.id });
+      if (sec.warn) delBtn.setAttribute('data-warn', sec.warn(x));
+      rc.append(delBtn);
       row.append(rc);
       list.append(row);
     });
@@ -2843,7 +2914,25 @@
     const rs = e.target.closest('[data-restore]');
     if (rs) {
       const [kind, rid] = rs.getAttribute('data-restore').split(':');
-      X5.mutate('POST', '/api/archive', { kind, id: rid, restore: true }, 'Qaytarildi').catch(() => {});
+      if (kind === 'member') X5.mutate('POST', '/api/members/' + rid + '/active', { active: true }, "A'zo qayta faollashtirildi").catch(() => {});
+      else X5.mutate('POST', '/api/archive', { kind, id: rid, restore: true }, 'Qaytarildi').catch(() => {});
+      return;
+    }
+    const fv = e.target.closest('[data-forever]');
+    if (fv) {
+      // Ikki bosqich: birinchisida ogohlantirish matni ko'rsatiladi, ikkinchisida o'chiriladi
+      if (!fv.hasAttribute('data-armed')) {
+        fv.setAttribute('data-armed', '1');
+        fv.textContent = 'Ha, butunlay';
+        const wrn = fv.getAttribute('data-warn') || "Bu yozuv butunlay o'chadi.";
+        toast(wrn + ' Qaytarib bo\'lmaydi (faqat zaxiradan). Tasdiqlash uchun yana bosing.', 7000);
+        setTimeout(() => { if (fv.isConnected) { fv.removeAttribute('data-armed'); fv.textContent = "Butunlay o'chirish"; } }, 6000);
+        return;
+      }
+      const [kind, rid] = fv.getAttribute('data-forever').split(':');
+      fv.disabled = true;
+      const req = kind === 'member' ? X5.mutate('DELETE', '/api/members/' + rid, undefined, "A'zo butunlay o'chirildi") : X5.mutate('POST', '/api/archive', { kind, id: rid, forever: true }, "Butunlay o'chirildi");
+      req.catch(() => { fv.disabled = false; });
       return;
     }
     const at = e.target.closest('[data-atab]');

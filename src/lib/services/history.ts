@@ -5,11 +5,11 @@ import { isAdmin, type Me } from '../perm';
 import { snapshot } from './common';
 
 const TABLE: Record<string, string> = { task: 'tasks', shoot: 'shoots', content: 'contents', project: 'projects', member: 'members' };
-const SOFT: string[] = ['task', 'shoot', 'content'];
+const SOFT: string[] = ['task', 'shoot', 'content', 'project'];
 const SKIP_COLS = new Set(['id', 'created_at', 'password_hash', 'totp_secret', 'telegram_chat_id', 'telegram_status']);
 
 export const REVERTABLE_SQL = `reverted_at is null and entity in ('task','shoot','content','project','member') and entity_id is not null and (
-  (action = 'update' and before_data is not null) or (action in ('create','delete','restore') and entity in ('task','shoot','content')))`;
+  (action = 'update' and before_data is not null) or (action in ('create','delete','restore') and entity in ('task','shoot','content','project')))`;
 
 /** Admin tarixdagi bitta o'zgarishni bekor qiladi: qator oldingi holatiga qaytadi yoki arxivga/arxivdan o'tadi. */
 export async function revertEntry(me: Me, entryId: number) {

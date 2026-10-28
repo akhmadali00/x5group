@@ -168,7 +168,7 @@ async function sendShoots(sql: Sql, chat: number, member: R) {
   const date = localParts().date;
   const rows = await sql<R[]>`
     select s.*, p.name as project from shoots s join projects p on p.id = s.project_id
-    where s.archived_at is null and s.status = 'Rejada' and s.shoot_date >= ${date}
+    where s.archived_at is null and p.archived_at is null and s.status = 'Rejada' and s.shoot_date >= ${date}
       ${member.role === 'admin' ? sql`` : sql`and (s.operator_id = ${member.id} or s.brandface_id = ${member.id} or s.project_id in (select project_id from project_pms where member_id = ${member.id}))`}
     order by s.shoot_date, s.shoot_time limit 10`;
   if (!rows.length) { await sendMessage(chat, "Yaqin syomka yo'q."); return; }

@@ -265,6 +265,10 @@ a.lx-lnk-v{color:var(--lx-accent);text-decoration:none}
 .lx-arow{padding:.9rem 0;border-bottom:1px solid var(--lx-hair);font-variant-numeric:tabular-nums}
 .lx-arow:last-child{border-bottom:0}
 .lx-arow>.lx-arest{display:flex;justify-content:flex-end}
+.lx-arest{gap:.5rem;flex-wrap:wrap}
+.lx-dz{grid-column:1/-1;margin-top:1rem;padding-top:.9rem;border-top:1px solid var(--lx-hair)}
+.lx-dz label{display:block;font-weight:600;color:var(--color-fg);margin-bottom:.3rem}
+.lx-dzrow{display:flex;gap:.6rem;flex-wrap:wrap;margin-top:.6rem}
 .lx-arest .lx-btn{padding:.3rem .9rem;font-size:var(--cds-font-size-caption);white-space:nowrap}
 .lx-awhen{color:var(--color-fg-muted);font-size:var(--cds-font-size-caption)}
 @container (max-width: 52rem){

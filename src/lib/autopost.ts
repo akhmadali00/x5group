@@ -59,7 +59,7 @@ export async function autoPost(sql: Sql, t: Local): Promise<number> {
   if (!botEnabled()) return 0;
   const rows = await sql<R[]>`
     select c.*, p.name as project, p.tg_link from contents c join projects p on p.id = c.project_id
-    where c.archived_at is null and c.stage = 'Tasdiqlandi' and c.auto_post and 'telegram' = any(c.platforms) and not ('telegram' = any(c.posted_on))
+    where c.archived_at is null and p.archived_at is null and c.stage = 'Tasdiqlandi' and c.auto_post and 'telegram' = any(c.platforms) and not ('telegram' = any(c.posted_on))
       and c.post_date is not null and c.post_time is not null and c.post_date <= ${t.date}`;
   let done = 0;
   for (const c of rows) {

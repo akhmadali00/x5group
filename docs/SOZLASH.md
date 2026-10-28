@@ -71,6 +71,13 @@ Qo'shimcha: `vercel.json` da kuniga bir marta ishlaydigan zaxira chaqiruv bor (V
 - **Jamoa → o'z ismingiz → Tahrirlash → 2 bosqichli kirish → Yoqish** (Google Authenticator bilan). Admin uchun tavsiya etiladi.
 - Token va parollarni chatga, GitHub'ga yozmang. Agar tasodifan oshkor bo'lsa, tokenni @BotFather'da `/revoke` qiling, Supabase'da parolni almashtiring.
 
+## 7.1. O'chirish va arxiv
+
+- Vazifa, syomka, kontent, loyiha avval **Arxivga** yuboriladi (loyiha: Loyiha ma'lumotlari → Tahrirlash → «Arxivga yuborish»). Arxiv sahifasida har biri uchun «Qaytarish» yoki «Butunlay o'chirish» bor (faqat Admin, ikki marta bosib tasdiqlanadi).
+- Butunlay o'chirilganini faqat zaxira nusxadan tiklash mumkin. Loyiha o'chirilsa uning kontent, syomka va kampaniyalari ham o'chadi.
+- A'zo: Tahrirlash oynasida «Faolsizlantirish» (kira olmaydi, botdan xabar olmaydi, tugallanmagan vazifalari arxivga o'tadi, kontent va tarixi saqlanadi; Arxiv → A'zolar'dan qayta faollashtiriladi) yoki «Butunlay o'chirish» (vazifalari ham o'chadi).
+- O'zingizni va oxirgi Adminni faolsizlantirib yoki o'chirib bo'lmaydi.
+
 ## 8. Zaxira
 
 - Har kuni ertalab 03:00 dan keyin avtomatik zaxira olinadi va Adminga Telegramda **fayl** bo'lib keladi. Oxirgi 30 kun bazada ham saqlanadi.
