@@ -26,6 +26,7 @@ export const ProjectBody = z.object({
   ytLink: zStr(300),
   ytStart: zInt(),
   reachStart: zInt(0, 2_000_000_000),
+  reachNow: zInt(0, 2_000_000_000),
   adsSource: zStr(60),
   adAccount: zStr(120),
   portfolio: zStr(120)
@@ -80,7 +81,7 @@ export async function updateProject(me: Me, id: string, input: unknown) {
         target_plan = ${b.targetPlan}, owner_name = ${b.ownerName}, owner_phone = ${b.ownerPhone}, owner_telegram = ${b.ownerTelegram}, owner_instagram = ${b.ownerInstagram},
         ig_link = ${b.igLink}, tg_link = ${b.tgLink}, yt_link = ${b.ytLink},
         ig_start = ${b.igStart}, tg_start = ${b.tgStart}, yt_start = ${b.ytStart}, reach_start = ${b.reachStart},
-        ig_now = coalesce(ig_now, ${b.igStart}), tg_now = coalesce(tg_now, ${b.tgStart}), yt_now = coalesce(yt_now, ${b.ytStart}), reach_now = coalesce(reach_now, ${b.reachStart}),
+        ig_now = coalesce(ig_now, ${b.igStart}), tg_now = coalesce(tg_now, ${b.tgStart}), yt_now = coalesce(yt_now, ${b.ytStart}), reach_now = coalesce(${b.reachNow}, reach_now, ${b.reachStart}),
         ads_source = ${b.adsSource}, ad_account = ${b.adAccount}, portfolio = ${b.portfolio}
       where id = ${id} returning *`;
     await tx`delete from project_pms where project_id = ${id}`;

@@ -1122,6 +1122,7 @@
       withIcon('youtube', 'YouTube kanal havolasi', mkInput('text', p.yt_havola || '', 'youtube.com/@nom'), 'ytLink'),
       withIcon('youtube', 'YouTube obunachilari', mkInput('number', p.yt_boshlang != null ? p.yt_boshlang : '', '1000', { min: '0' }), 'ytStart'),
       mkField("Oylik qamrov (ko'rishlar soni)", mkInput('number', p.oxvat_boshlang != null ? p.oxvat_boshlang : '', '150000', { min: '0' }), null, 'reachStart'),
+      mkField("Hozirgi oylik qamrov (qo'lda yangilanadi)", mkInput('number', p.oxvat_hozir != null ? p.oxvat_hozir : '', '180000', { min: '0' }), null, 'reachNow'),
       (() => {
         const h = el('div', 'lx-field lx-wide lx-sechead');
         h.append(el('label', null, "Target ma'lumot manbasi"), el('p', 'lx-hint2', "Kampaniyalar va ko'rsatkichlar (Amount Spent, Results, Hook, Hold) shu manbadan olinadi. Token va parollar bu yerga yozilmaydi — ular serverda xavfsiz saqlanadi."));
