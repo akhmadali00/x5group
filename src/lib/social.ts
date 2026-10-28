@@ -28,7 +28,8 @@ async function telegramCount(link: string | null): Promise<number | null> {
 async function youtubeCount(link: string | null): Promise<number | null> {
   const key = process.env.YOUTUBE_API_KEY;
   const s = String(link || '').trim();
-  if (!key || !s) return null;
+  if (!s) return null;
+  if (!key) throw new Error('YOUTUBE_API_KEY Vercelda kiritilmagan');
   let q: Record<string, string> | null = null;
   try {
     const u = new URL(/^https?:\/\//i.test(s) ? s : 'https://' + s);
@@ -54,7 +55,9 @@ async function youtubeCount(link: string | null): Promise<number | null> {
 async function instagramCount(link: string | null): Promise<number | null> {
   const token = process.env.META_ACCESS_TOKEN, me = process.env.META_IG_USER_ID;
   const h = handleOf(link, /(^|\.)instagram\.com$/);
-  if (!token || !me || !h) return null;
+  if (!String(link || '').trim()) return null;
+  if (!token || !me) throw new Error('META_ACCESS_TOKEN yoki META_IG_USER_ID Vercelda kiritilmagan');
+  if (!h) throw new Error("Instagram havolasi tushunarsiz (instagram.com/nom yoki @nom yozing)");
   const url = new URL(`${(process.env.META_API_BASE || 'https://graph.facebook.com').replace(/\/$/, '')}/${process.env.META_API_VERSION || 'v21.0'}/${me}`);
   url.searchParams.set('fields', `business_discovery.username(${h}){followers_count}`);
   const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(20000) });
